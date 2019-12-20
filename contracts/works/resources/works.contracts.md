@@ -34,6 +34,15 @@ summary: 'Draft New Telos Works Proposal'
 icon: https://github.com/Telos-Foundation/images/raw/master/ricardian_assets/eosio.contracts/icons/account.png#3d55a2fc3a5c20b456f5657faf666bc25ffd06f4836c5e8256f741149b0b294f
 ---
 
+<h1 class="contract">launchprop</h1>
+
+---
+spec_version: "0.2.0"
+title: Launch Proposal
+summary: 'Launch Proposal'
+icon: https://github.com/Telos-Foundation/images/raw/master/ricardian_assets/eosio.contracts/icons/account.png#3d55a2fc3a5c20b456f5657faf666bc25ffd06f4836c5e8256f741149b0b294f
+---
+
 <h1 class="contract">cancelprop</h1>
 
 ---
@@ -79,21 +88,21 @@ summary: 'Edit Milestone Reuested Funds'
 icon: https://github.com/Telos-Foundation/images/raw/master/ricardian_assets/eosio.contracts/icons/account.png#3d55a2fc3a5c20b456f5657faf666bc25ffd06f4836c5e8256f741149b0b294f
 ---
 
-<h1 class="contract">startms</h1>
-
----
-spec_version: "0.2.0"
-title: Start Milestone
-summary: 'Start Milestone Voting'
-icon: https://github.com/Telos-Foundation/images/raw/master/ricardian_assets/eosio.contracts/icons/account.png#3d55a2fc3a5c20b456f5657faf666bc25ffd06f4836c5e8256f741149b0b294f
----
-
 <h1 class="contract">closems</h1>
 
 ---
 spec_version: "0.2.0"
 title: Close Milestone
 summary: 'Close Milestone Voting'
+icon: https://github.com/Telos-Foundation/images/raw/master/ricardian_assets/eosio.contracts/icons/account.png#3d55a2fc3a5c20b456f5657faf666bc25ffd06f4836c5e8256f741149b0b294f
+---
+
+<h1 class="contract">nextms</h1>
+
+---
+spec_version: "0.2.0"
+title: Start Next Milestone
+summary: 'Start Next Milestone Voting'
 icon: https://github.com/Telos-Foundation/images/raw/master/ricardian_assets/eosio.contracts/icons/account.png#3d55a2fc3a5c20b456f5657faf666bc25ffd06f4836c5e8256f741149b0b294f
 ---
 

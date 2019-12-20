@@ -119,7 +119,7 @@ ACTION works::draftprop(string title, string description, string content, name p
         col.proposer = proposer;
         col.category = category;
         col.status = name("drafting");
-        col.current_ballot = name(0);
+        col.current_ballot = proposal_name;
         col.fee = proposal_fee;
         col.refunded = false;
         col.total_requested = total_requested;
@@ -128,7 +128,7 @@ ACTION works::draftprop(string title, string description, string content, name p
         col.current_milestone = uint16_t(0);
     });
 
-    //intialize
+    //initialize
     map<name, asset> blank_results;
     time_point_sec now = time_point_sec(current_time_point());
 
@@ -144,7 +144,7 @@ ACTION works::draftprop(string title, string description, string content, name p
             col.status = name("queued");
             col.requested = per_milestone;
             col.report = "";
-            col.ballot_name = name(0);
+            col.ballot_name = proposal_name;
             col.ballot_results = blank_results;
         });
 
@@ -175,6 +175,52 @@ ACTION works::draftprop(string title, string description, string content, name p
         title, //title
         description, //description
         content //content
+    )).send();
+
+}
+
+ACTION works::launchprop(name proposal_name) {
+
+    //open proposals table, get proposal
+    proposals_table proposals(get_self(), get_self().value);
+    auto& prop = proposals.get(proposal_name.value, "proposal not found");
+
+    //authenticate
+    require_auth(prop.proposer);
+
+    //open milestones table, get milestone
+    milestones_table milestones(get_self(), proposal_name.value);
+    auto& ms = milestones.get(uint64_t(0), "milestone not found");
+
+    //open config singleton, get config
+    config_singleton configs(get_self(), get_self().value);
+    auto conf = configs.get();
+
+    //validate
+    check(prop.status == "drafting"_n, "proposal must be in drafting mode to launch");
+    check(prop.total_requested <= conf.max_requested, "total requested is more than maximum allowed");
+    check(prop.current_milestone == 0, "proposal must be in its first milestone to launch");
+    check(prop.milestones <= conf.max_milestones, "milestones is more than maximum allowed");
+    check(ms.status == "queued"_n, "milestone must be queued to start");
+
+    //update proposal
+    proposals.modify(prop, same_payer, [&](auto& col) {
+        col.status = name("inprogress");
+    });
+
+    //update milestone
+    milestones.modify(ms, same_payer, [&](auto& col) {
+        col.status = "voting"_n;
+    });
+
+    //initialize
+    time_point_sec now = time_point_sec(current_time_point());
+    time_point_sec ballot_end_time = now + conf.milestone_length;
+
+    //send inline openvoting
+    action(permission_level{get_self(), name("active")}, name("trailservice"), name("openvoting"), make_tuple(
+        proposal_name, //ballot_name
+        ballot_end_time //end_time
     )).send();
 
 }
@@ -359,59 +405,6 @@ ACTION works::editms(name proposal_name, uint64_t milestone_id, asset new_reques
 
 }
 
-ACTION works::startms(name proposal_name, name ballot_name) {
-
-    //open proposals table, get proposal
-    proposals_table proposals(get_self(), get_self().value);
-    auto& prop = proposals.get(proposal_name.value, "proposal not found");
-
-    //authenticate
-    require_auth(prop.proposer);
-
-    //open milestones table, get milestone
-    milestones_table milestones(get_self(), proposal_name.value);
-    auto& ms = milestones.get(prop.current_milestone, "milestone not found");
-
-    //open config singleton, get config
-    config_singleton configs(get_self(), get_self().value);
-    auto conf = configs.get();
-
-    //initialize
-    name new_prop_status;
-
-    //validate
-    check(ms.status == "queued"_n, "milestone must be queued to start");
-    check(prop.current_milestone < prop.milestones, "no milestones left");
-
-    if (prop.current_milestone == 0) {
-        check(prop.status == "drafting"_n, "proposal must be drafting to start first milestone");
-        new_prop_status = "inprogress"_n;
-    } else {
-        check(prop.status == "inprogress"_n, "proposal must be in progress to start next milestone");
-    }
-
-    //update proposal
-    proposals.modify(prop, same_payer, [&](auto& col) {
-        col.status = new_prop_status;
-    });
-
-    //update milestone
-    milestones.modify(ms, same_payer, [&](auto& col) {
-        col.status = "voting"_n;
-    });
-
-    //initialize
-    time_point_sec now = time_point_sec(current_time_point());
-    time_point_sec ballot_end_time = now + conf.milestone_length;
-
-    //send inline openvoting
-    action(permission_level{get_self(), name("active")}, name("trailservice"), name("openvoting"), make_tuple(
-        ballot_name, //ballot_name
-        ballot_end_time //end_time
-    )).send();
-
-}
-
 ACTION works::closems(name proposal_name) {
 
     //open proposals table, get proposal
@@ -438,6 +431,79 @@ ACTION works::closems(name proposal_name) {
 
 }
 
+ACTION works::nextms(name proposal_name, name ballot_name) {
+
+    //open proposals table, get proposal
+    proposals_table proposals(get_self(), get_self().value);
+    auto& prop = proposals.get(proposal_name.value, "proposal not found");
+
+    //authenticate
+    require_auth(prop.proposer);
+
+    //initialize
+    uint64_t next_milestone = prop.current_milestone + 1;
+
+    //open milestones table, get milestone
+    milestones_table milestones(get_self(), proposal_name.value);
+    auto& ms = milestones.get(next_milestone, "milestone not found");
+
+    //open config singleton, get config
+    config_singleton configs(get_self(), get_self().value);
+    auto conf = configs.get();
+
+    //validate
+    check(prop.current_milestone < prop.milestones, "no milestones left");
+    check(ms.status == "queued"_n, "next milestone must be queued to advacne");
+    // check(ms.status == "failed"_n || ms.status == "paid"_n, "last milestone must be failed or paid to advance");
+
+    //update proposal
+    proposals.modify(prop, same_payer, [&](auto& col) {
+        col.current_ballot = ballot_name;
+        col.current_milestone += 1;
+    });
+
+    //update new milestone
+    milestones.modify(ms, same_payer, [&](auto& col) {
+        col.status = "voting"_n;
+        col.ballot_name = ballot_name;
+    });
+
+    //initialize
+    vector<name> ballot_options = { name("yes"), name("no"), name("abstain") };
+    time_point_sec now = time_point_sec(current_time_point());
+    time_point_sec ballot_end_time = now + conf.milestone_length;
+
+    //charge telos decide newballot fee
+    sub_balance(prop.proposer, asset(300000, TLOS_SYM)); //30 TLOS
+
+    //TODO?: send transfer inline from self to trailservice to pay for newballot fee?
+
+    //send inline newballot
+    action(permission_level{get_self(), name("active")}, name("trailservice"), name("newballot"), make_tuple(
+        ballot_name, //ballot_name
+        name("proposals"), //category
+        get_self(), //publisher
+        VOTE_SYM, //treasury_symbol
+        name("1token1vote"), //voting_method
+        ballot_options //initial_options
+    )).send();
+
+    //send inline editdetails
+    action(permission_level{get_self(), name("active")}, name("trailservice"), name("editdetails"), make_tuple(
+        ballot_name, //ballot_name
+        prop.title, //title
+        prop.description, //description
+        prop.content //content
+    )).send();
+
+    //send inline openvoting
+    action(permission_level{get_self(), name("active")}, name("trailservice"), name("openvoting"), make_tuple(
+        ballot_name, //ballot_name
+        ballot_end_time //end_time
+    )).send();
+
+}
+
 ACTION works::submitreport(name proposal_name, string report) {
 
     //open proposals table, get proposal
@@ -453,7 +519,7 @@ ACTION works::submitreport(name proposal_name, string report) {
 
     //validate
     check(prop.status == "inprogress"_n, "must submit report when proposal is in progress");
-    check(ms.status == "voting"_n || ms.status == "approved"_n, "milestone must be voting or approved to submit report");
+    check(ms.status == "voting"_n || ms.status == "passed"_n, "milestone must be voting or passed to submit report");
     check(report != "", "report cannot be empty");
 
     //update milestone
@@ -482,7 +548,7 @@ ACTION works::claimfunds(name proposal_name) {
 
     //validate
     check(prop.status == "inprogress"_n, "proposal must be in progress to claim funds");
-    check(ms.status == "approved"_n, "milestone must be approved to claim funds");
+    check(ms.status == "passed"_n, "milestone must be passed to claim funds");
     check(ms.report != "", "must submit report to claim funds");
 
     //update milestone
@@ -656,7 +722,7 @@ void works::catch_broadcast(name ballot_name, map<name, asset> final_results, ui
                 
                 approve = true;
                 refund = true;
-                new_status = name("approved");
+                new_status = name("passed");
 
             } else if (total_votes >= quorum_refund_thresh && final_results["yes"_n] >= approve_refund_thresh && !refund) {
                 

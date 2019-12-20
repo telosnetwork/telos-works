@@ -47,6 +47,9 @@ CONTRACT works : public contract {
     ACTION draftprop(string title, string description, string content, name proposal_name, 
         name proposer, name category, asset total_requested, optional<uint16_t> milestones);
 
+    //launch a proposal
+    ACTION launchprop(name proposal_name);
+
     //cancel proposal
     ACTION cancelprop(name proposal_name, string memo);
 
@@ -64,11 +67,11 @@ CONTRACT works : public contract {
     //edit a milestone
     ACTION editms(name proposal_name, uint64_t milestone_id, asset new_requested);
 
-    //start a milestone
-    ACTION startms(name proposal_name, name ballot_name);
-
     //close milestone voting
     ACTION closems(name proposal_name);
+
+    //start next milestone
+    ACTION nextms(name proposal_name, name ballot_name);
 
     //submit a milestone report
     ACTION submitreport(name proposal_name, string report);
@@ -179,7 +182,7 @@ CONTRACT works : public contract {
     //scope: proposal_name.value
     TABLE milestone {
         uint64_t milestone_id; //milestone number
-        name status; //queued, voting, approved, failed, cancelled, paid
+        name status; //queued, voting, passed, failed, paid
         asset requested; //amount requested for milestone
         string report; //previous milestone report and plan for current milestone
         name ballot_name;
