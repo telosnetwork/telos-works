@@ -13,12 +13,12 @@
 
 ### ACTION draftprop()
 * title: "Proposal 1"
-* description: "Worker Proposal 1"
+* description: "Works Proposal 1"
 * content: "none"
 * proposal_name: "worksprop1"
 * proposer: "workstester1"
 * category: "apps"
-* total_requested: "5000.0000 TLOS"
+* total_requested: "1000.0000 TLOS"
 * milestones: 2
 
 3. Start First Milestone

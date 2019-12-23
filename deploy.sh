@@ -3,7 +3,6 @@
 # contract
 if [[ "$1" == "works" ]]; then
     contract=works
-    account=workstester1
 else
     echo "need contract"
     exit 0
@@ -27,7 +26,7 @@ else
     exit 0
 fi
 
-echo ">>> Deploying $contract contract to $account on Telos $2..."
+echo ">>> Deploying $contract contract to $account on Telos $network..."
 
 # eosio v1.8.0
 cleos -u $url set contract $account ./build/$contract/ $contract.wasm $contract.abi -p $account

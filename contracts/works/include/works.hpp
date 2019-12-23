@@ -13,6 +13,8 @@ using namespace eosio;
 
 //approved treasuries: VOTE
 
+//categories: marketing, apps, developers, education
+
 //proposal statuses: drafting, inprogress, failed, cancelled, completed
 
 //milestones status: queued, voting, passed, failed, paid
@@ -39,14 +41,15 @@ CONTRACT works : public contract {
     //set new admin
     ACTION setadmin(name new_admin);
 
+    ACTION fix();
+
     //TODO: actions to change config settings
 
     //======================== proposal actions ========================
 
     //draft a new community proposal
-    ACTION draftprop(string title, string description, string content, name proposal_name, 
-        name proposer, name category, asset total_requested, optional<uint16_t> milestones);
-
+    ACTION draftprop(string title, string description, string content, name proposal_name, name proposer, name category, asset total_requested, optional<uint16_t> milestones);
+    
     //launch a proposal
     ACTION launchprop(name proposal_name);
 
@@ -70,14 +73,14 @@ CONTRACT works : public contract {
     //close milestone voting
     ACTION closems(name proposal_name);
 
-    //start next milestone
-    ACTION nextms(name proposal_name, name ballot_name);
-
     //submit a milestone report
     ACTION submitreport(name proposal_name, string report);
 
     //claim milestone funding
     ACTION claimfunds(name proposal_name);
+
+    //start next milestone
+    ACTION nextms(name proposal_name, name ballot_name);
 
     //======================== account actions ========================
 
@@ -105,6 +108,9 @@ CONTRACT works : public contract {
 
     //validate a category
     bool valid_category(name category);
+
+    //returns status name of milestone
+    name get_milestone_status(name proposal_name, uint64_t milestone_id);
 
     //======================== contract tables ========================
 
@@ -168,8 +174,8 @@ CONTRACT works : public contract {
         uint64_t by_ballot() const { return current_ballot.value; }
 
         EOSLIB_SERIALIZE(proposal, (title)(description)(content)
-            (proposal_name)(current_ballot)(proposer)(category)(status)
-            (fee)(total_requested)(remaining)(milestones)(current_milestone))
+            (proposal_name)(proposer)(category)(status)(current_ballot)
+            (fee)(refunded)(total_requested)(remaining)(milestones)(current_milestone))
     };
     typedef multi_index<name("proposals"), proposal,
         indexed_by<name("byproposer"), const_mem_fun<proposal, uint64_t, &proposal::by_proposer>>,
