@@ -1,6 +1,10 @@
 # Telos Works
 Telos Works is a Worker Proposal System for the Telos Blockchain Network.
 
+## Documentation
+
+Documentation for Telos Works can be found on the [Telos Net Docs](https://docs.telos.net/telos-works/introduction)
+
 ## Setup
 
 To begin, navigate to the project directory: `telos-works/`
