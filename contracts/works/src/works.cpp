@@ -79,8 +79,8 @@ ACTION works::fix() {
     // proposals_table proposals(get_self(), get_self().value);
     // auto& prop = proposals.get(name("worksprop4").value, "prop not found");
 
-    milestones_table milestones(get_self(), name("worksprop4").value);
-    auto& ms = milestones.get(uint64_t(2), "milestone not found");
+    // milestones_table milestones(get_self(), name("worksprop4").value);
+    // auto& ms = milestones.get(uint64_t(2), "milestone not found");
 
     // config_singleton configs(get_self(), get_self().value);
     // auto conf = configs.get();
@@ -95,14 +95,14 @@ ACTION works::fix() {
     //     col.remaining = asset(8000000, TLOS_SYM);
     // });
 
-    map<name, asset> final_results;
-    final_results["yes"_n] = asset(0, TLOS_SYM);
-    final_results["no"_n] = asset(0, TLOS_SYM);
-    final_results["abstain"_n] = asset(0, TLOS_SYM);
+    // map<name, asset> final_results;
+    // final_results["yes"_n] = asset(0, TLOS_SYM);
+    // final_results["no"_n] = asset(0, TLOS_SYM);
+    // final_results["abstain"_n] = asset(0, TLOS_SYM);
 
-    milestones.modify(ms, same_payer, [&](auto& col) {
-        col.ballot_results = final_results;
-    });
+    // milestones.modify(ms, same_payer, [&](auto& col) {
+    //     col.ballot_results = final_results;
+    // });
 
 }
 
@@ -856,7 +856,7 @@ void works::catch_broadcast(name ballot_name, map<name, asset> final_results, ui
             } else {
 
                 //execute if current and last milestone both failed
-                if (!approve && get_milestone_status(by_ballot_itr->current_milestone - 1) == "failed"_n) {
+                if (!approve && get_milestone_status(by_ballot_itr->proposal_name, by_ballot_itr->current_milestone - 1) == "failed"_n) {
 
                     //update proposal status
                     new_prop_status = name("failed");
