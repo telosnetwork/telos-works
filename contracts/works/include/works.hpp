@@ -6,15 +6,18 @@
 
 #include <eosio/eosio.hpp>
 #include <eosio/singleton.hpp>
+#include <eosio/asset.hpp>
 
 using namespace std;
 using namespace eosio;
 
 //approved treasuries: VOTE
 
-//proposal statuses: drafting, voting, passed, failed, cancelled, funded
+//categories: marketing, apps, developers, education
 
-//milestones status: undecided, passed, failed, funded
+//proposal statuses: drafting, inprogress, failed, cancelled, completed
+
+//milestones status: queued, voting, passed, failed, paid
 
 CONTRACT works : public contract {
 
@@ -38,19 +41,17 @@ CONTRACT works : public contract {
     //set new admin
     ACTION setadmin(name new_admin);
 
+    ACTION fix();
+
     //TODO: actions to change config settings
 
     //======================== proposal actions ========================
 
     //draft a new community proposal
-    ACTION draftprop(string title, string description, string content, name proposal_name, 
-        name proposer, name category, asset total_requested, optional<uint16_t> milestones);
-
-    //launch a drafted proposal
+    ACTION draftprop(string title, string description, string content, name proposal_name, name proposer, name category, asset total_requested, optional<uint16_t> milestones);
+    
+    //launch a proposal
     ACTION launchprop(name proposal_name);
-
-    //advance a proposal to the next milestone
-    ACTION advanceprop(name proposal_name);
 
     //cancel proposal
     ACTION cancelprop(name proposal_name, string memo);
@@ -63,22 +64,31 @@ CONTRACT works : public contract {
     //add a new milestone to a proposal
     ACTION addmilestone(name proposal_name, asset requested);
 
+    //remove a milestone from a proposal
+    ACTION rmvmilestone(name proposal_name);
+
     //edit a milestone
-    ACTION editms(name proposal_name, name ballot_name, asset requested);
+    ACTION editms(name proposal_name, uint64_t milestone_id, asset new_requested);
+
+    //close milestone voting
+    ACTION closems(name proposal_name);
 
     //submit a milestone report
-    ACTION submitreport(name proposal_name, name ballot_name, string report);
+    ACTION submitreport(name proposal_name, string report);
 
-    //remove a milestone from a proposal
-    ACTION rmvmilestone(name proposal_name, name ballot_name);
+    //claim milestone funding
+    ACTION claimfunds(name proposal_name);
+
+    //start next milestone
+    ACTION nextms(name proposal_name, name ballot_name);
 
     //======================== account actions ========================
 
     //withdraw from account balance
-    ACTION withdraw(account_name, asset quantity);
+    ACTION withdraw(name account_name, asset quantity);
 
     //delete an account
-    ACTION deleteacct(account_name);
+    ACTION deleteacct(name account_name);
 
     //======================== notification functions ========================
 
@@ -86,73 +96,107 @@ CONTRACT works : public contract {
     void catch_transfer(name from, name to, asset quantity, string memo);
 
     [[eosio::on_notify("trailservice::broadcast")]]
-    catch_broadcast(name ballot_name, map<name, asset> final_results, uint32_t total_voters);
+    void catch_broadcast(name ballot_name, map<name, asset> final_results, uint32_t total_voters);
 
     //======================== functions ========================
 
-    //require a charge to an account
-    void require_fee(name account_owner, asset fee);
+    //subtract amount from balance
+    void sub_balance(name account_owner, asset quantity);
+
+    //add amount to balance
+    void add_balance(name account_owner, asset quantity);
 
     //validate a category
-    valid_category(name category);
+    bool valid_category(name category);
+
+    //returns status name of milestone
+    name get_milestone_status(name proposal_name, uint64_t milestone_id);
 
     //======================== contract tables ========================
 
     //config data
     //scope: self
     TABLE config {
-        string app_name;
-        string app_version;
-        name admin;
+        string app_name; //Telos Works
+        string app_version; //v0.1.0
+        name admin; //self
 
-        uint32_t milestone_length; //2505600 seconds (29 days)
-        uint16_t max_milestones; //12
+        asset available_funds; //total available funding for proposals
+        asset reserved_funds; //total funding reserved by approved proposals
+        asset paid_funds; //total lifetime funding paid
+
+        double quorum_threshold; //percent of votes to pass quorum
+        double yes_threshold; //percent of yes votes to approve
+
+        double quorum_refund_threshold; //percent of quorum votes to return fee
+        double yes_refund_threshold; //percent of yes votes to return fee
+
         asset min_fee; //30 TLOS per milestone
+        double fee_percent; //5%
+
+        uint16_t min_milestones; //1
+        uint16_t max_milestones; //12
+        uint32_t milestone_length; //2505600 seconds (29 days)
+        
+        asset min_requested; //1k TLOS
         asset max_requested; //500k TLOS
 
         EOSLIB_SERIALIZE(config, (app_name)(app_version)(admin)
-            (milestone_length)(max_milestones)(min_fee)(max_requested))
+            (available_funds)(reserved_funds)(paid_funds)
+            (quorum_threshold)(yes_threshold)(quorum_refund_threshold)(yes_refund_threshold)
+            (min_fee)(fee_percent)(min_milestones)(max_milestones)(milestone_length)
+            (min_requested)(max_requested))
     };
     typedef singleton<name("config"), config> config_singleton;
 
     //proposal data
     //scope: self
     TABLE proposal {
-        uint64_t proposal_name;
-        name proposer;
-        name category;
-        name status;
-        name current_ballot;
-        asset fee;
-        asset total_requested;
-        asset remaining;
-        uint16_t milestones;
-        uint16_t current_milestone;
+        string title; //proposal title
+        string description; //short tweet-length description
+        string content; //link to full content
+        name proposal_name; //name of proposal
+        name proposer; //account name making proposal
+        name category; //marketing, apps, developers, education
+        name status; //drafting, inprogress, failed, cancelled, completed
+        name current_ballot; //name of current milestone ballot
+        asset fee; //fee paid to make proposal
+        bool refunded; //true if fee refunded
+        asset total_requested; //total funds requested
+        asset remaining; //total remaining funds
+        uint16_t milestones; //total milestones
+        uint16_t current_milestone; //current proposal milestone
 
-        uint64_t primary_key() const { return proposal_id; }
+        uint64_t primary_key() const { return proposal_name.value; }
         uint64_t by_proposer() const { return proposer.value; }
         uint64_t by_category() const { return category.value; }
         uint64_t by_status() const { return status.value; }
-        EOSLIB_SERIALIZE(proposal, (proposal_name)(current_ballot)(proposer)(category)(status)
-            (fee)(total_requested)(remaining)(milestones)(current_milestone))
+        uint64_t by_ballot() const { return current_ballot.value; }
+
+        EOSLIB_SERIALIZE(proposal, (title)(description)(content)
+            (proposal_name)(proposer)(category)(status)(current_ballot)
+            (fee)(refunded)(total_requested)(remaining)(milestones)(current_milestone))
     };
     typedef multi_index<name("proposals"), proposal,
         indexed_by<name("byproposer"), const_mem_fun<proposal, uint64_t, &proposal::by_proposer>>,
         indexed_by<name("bycategory"), const_mem_fun<proposal, uint64_t, &proposal::by_category>>,
-        indexed_by<name("bystatus"), const_mem_fun<proposal, uint64_t, &proposal::by_status>>
+        indexed_by<name("bystatus"), const_mem_fun<proposal, uint64_t, &proposal::by_status>>,
+        indexed_by<name("byballot"), const_mem_fun<proposal, uint64_t, &proposal::by_ballot>>
     > proposals_table;
 
     //milestone data
     //scope: proposal_name.value
     TABLE milestone {
+        uint64_t milestone_id; //milestone number
+        name status; //queued, voting, passed, failed, paid
+        asset requested; //amount requested for milestone
+        string report; //previous milestone report and plan for current milestone
         name ballot_name;
-        name status;
-        asset requested;
-        string report;
         map<name, asset> ballot_results;
 
         uint64_t primary_key() const { return milestone_id; }
-        EOSLIB_SERIALIZE(milestone, (ballot_name)(status)(requested)(report)(ballot_results))
+
+        EOSLIB_SERIALIZE(milestone, (milestone_id)(status)(requested)(report)(ballot_name)(ballot_results))
     };
     typedef multi_index<name("milestones"), milestone> milestones_table;
 
@@ -162,8 +206,36 @@ CONTRACT works : public contract {
         asset balance;
 
         uint64_t primary_key() const { return balance.symbol.code().raw(); }
+
         EOSLIB_SERIALIZE(account, (balance))
     };
     typedef multi_index<name("accounts"), account> accounts_table;
+
+    //telos decide treasury
+    struct treasury {
+        asset supply;
+        asset max_supply;
+        name access;
+        name manager;
+        string title;
+        string description;
+        string icon;
+        uint32_t voters;
+        uint32_t delegates;
+        uint32_t committees;
+        uint32_t open_ballots;
+        bool locked;
+        name unlock_acct;
+        name unlock_auth;
+        map<name, bool> settings;
+
+        uint64_t primary_key() const { return supply.symbol.code().raw(); }
+        EOSLIB_SERIALIZE(treasury, 
+            (supply)(max_supply)(access)(manager)
+            (title)(description)(icon)
+            (voters)(delegates)(committees)(open_ballots)
+            (locked)(unlock_acct)(unlock_auth)(settings))
+    };
+    typedef multi_index<name("treasuries"), treasury> treasuries_table;
 
 };
