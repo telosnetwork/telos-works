@@ -77,10 +77,12 @@ ACTION works::setadmin(name new_admin) {
 ACTION works::fix() {
 
     // proposals_table proposals(get_self(), get_self().value);
-    // auto& prop = proposals.get(name("worksprop4").value, "prop not found");
+    // auto& prop = proposals.get(name("workspropf").value, "prop not found");
 
-    // milestones_table milestones(get_self(), name("worksprop4").value);
-    // auto& ms = milestones.get(uint64_t(2), "milestone not found");
+    // milestones_table milestones(get_self(), name("wrokspropb").value);
+    // auto& ms = milestones.get(uint64_t(1), "milestone not found");
+
+    // milestones.erase(ms);
 
     // config_singleton configs(get_self(), get_self().value);
     // auto conf = configs.get();
@@ -89,10 +91,12 @@ ACTION works::fix() {
     // conf.reserved_funds += asset(12000000, TLOS_SYM);
     // configs.set(conf, get_self());
 
-    // add_balance(name("amendtester1"), asset(600000, TLOS_SYM));
+    // sub_balance(name("amendtester1"), asset(100000, TLOS_SYM));
+    
+    // add_balance("amendtester1"_n, asset(600000, TLOS_SYM));
 
     // proposals.modify(prop, same_payer, [&](auto& col) {
-    //     col.remaining = asset(8000000, TLOS_SYM);
+    //     col.fee = asset(0, TLOS_SYM);
     // });
 
     // map<name, asset> final_results;
@@ -100,7 +104,12 @@ ACTION works::fix() {
     // final_results["no"_n] = asset(0, TLOS_SYM);
     // final_results["abstain"_n] = asset(0, TLOS_SYM);
 
-    // milestones.modify(ms, same_payer, [&](auto& col) {
+    // milestones.emplace(get_self(), [&](auto& col) {
+    //     col.milestone_id = 1;
+    //     col.status = "failed"_n;
+    //     col.requested = asset(10000, TLOS_SYM);
+    //     col.report = "";
+    //     col.ballot_name = "wrokspropb"_n;
     //     col.ballot_results = final_results;
     // });
 
@@ -116,13 +125,6 @@ ACTION works::draftprop(string title, string description, string content, name p
     //open config singleton, get config
     config_singleton configs(get_self(), get_self().value);
     auto conf = configs.get();
-    
-    //initialize
-    asset proposal_fee = asset(int64_t(total_requested.amount * conf.fee_percent / 100), TLOS_SYM);
-
-    if (proposal_fee < conf.min_fee) {
-        proposal_fee = conf.min_fee;
-    }
 
     uint16_t milestone_count = 1;
 
@@ -151,7 +153,7 @@ ACTION works::draftprop(string title, string description, string content, name p
         col.category = category;
         col.status = name("drafting");
         col.current_ballot = proposal_name;
-        col.fee = proposal_fee;
+        col.fee = asset(0, TLOS_SYM);
         col.refunded = false;
         col.total_requested = total_requested;
         col.remaining = asset(0, TLOS_SYM);
@@ -191,13 +193,13 @@ ACTION works::draftprop(string title, string description, string content, name p
 
     }
 
-    //charge proposal fee
-    sub_balance(proposer, proposal_fee);
-
     //intialize
     vector<name> ballot_options = { name("yes"), name("no"), name("abstain") };
     time_point_sec ballot_end_time = now + conf.milestone_length;
     asset newballot_fee = asset(300000, TLOS_SYM); //TODO: get from trailservice config table
+
+    //charge newballot fee
+    sub_balance(proposer, newballot_fee);
 
     //send transfer inline to pay for newballot fee
     action(permission_level{get_self(), name("active")}, name("eosio.token"), name("transfer"), make_tuple(
@@ -244,21 +246,32 @@ ACTION works::launchprop(name proposal_name) {
     config_singleton configs(get_self(), get_self().value);
     auto conf = configs.get();
 
+    //initialize
+    asset proposal_fee = asset(int64_t(prop.total_requested.amount * conf.fee_percent / 100), TLOS_SYM);
+
+    if (proposal_fee < conf.min_fee) {
+        proposal_fee = conf.min_fee;
+    }
+
+    //charge proposal fee
+    sub_balance(prop.proposer, proposal_fee);
+
     //validate
     check(prop.status == "drafting"_n, "proposal must be in drafting mode to launch");
     check(prop.total_requested <= conf.max_requested, "total requested is more than maximum allowed");
-    check(prop.current_milestone == 1, "proposal must be in its first milestone to launch");
     check(prop.milestones <= conf.max_milestones, "milestones is more than maximum allowed");
+    check(prop.current_milestone == 1, "proposal must be in its first milestone to launch");
     check(ms.status == "queued"_n, "milestone must be queued to start");
 
     //update proposal
     proposals.modify(prop, same_payer, [&](auto& col) {
         col.status = name("inprogress");
+        col.fee = proposal_fee;
     });
 
     //update milestone
     milestones.modify(ms, same_payer, [&](auto& col) {
-        col.status = "voting"_n;
+        col.status = name("voting");
     });
 
     //initialize
@@ -325,14 +338,27 @@ ACTION works::deleteprop(name proposal_name) {
     auto& prop = proposals.get(proposal_name.value, "proposal not found");
 
     //authenticate
-    require_auth(prop.proposer);
+    // require_auth(prop.proposer);
+
+    //open config singleton, get config
+    config_singleton configs(get_self(), get_self().value);
+    auto conf = configs.get();
 
     //validate
     check(prop.status == "failed"_n || prop.status == "cancelled"_n || prop.status == "completed"_n, 
         "proposal must be failed, cancelled, or completed to delete");
+
+    //return remaining funds back to available funds
+    if (prop.remaining.amount > 0) {
+
+        conf.reserved_funds -= prop.remaining;
+        conf.available_funds += prop.remaining;
+        configs.set(conf, get_self());
+
+    }
     
     //delete each milestone
-    for (auto i = 1; i != prop.milestones; i++) {
+    for (auto i = 1; i <= prop.milestones; i++) {
 
         //open milestones table, get milestone
         milestones_table milestones(get_self(), proposal_name.value);
@@ -363,21 +389,25 @@ ACTION works::addmilestone(name proposal_name, asset requested) {
     config_singleton configs(get_self(), get_self().value);
     auto conf = configs.get();
 
+    //open milestones table
+    milestones_table milestones(get_self(), proposal_name.value);
+
     //validate
     check(prop.status == "drafting"_n, "proposal must be in drafting mode to add milestone");
-    check(requested.amount > 0, "must request a postitive amount");
+    check(requested.amount > 0, "must request a positive amount");
     check(prop.total_requested + requested <= conf.max_requested, "requested funds too high");
     check(prop.milestones + 1 <= conf.max_milestones, "proposal has reached the max allowed milestones");
 
     //initialize
+    uint64_t new_ms_id = prop.milestones + 1;
     map<name, asset> blank_results;
-
-    //open milestones table
-    milestones_table milestones(get_self(), proposal_name.value);
+    blank_results["yes"_n] = asset(0, VOTE_SYM);
+    blank_results["no"_n] = asset(0, VOTE_SYM);
+    blank_results["abstain"_n] = asset(0, VOTE_SYM);
 
     //add new milestone
     milestones.emplace(prop.proposer, [&](auto& col) {
-        col.milestone_id = milestones.available_primary_key();
+        col.milestone_id = new_ms_id;
         col.status = name("queued");
         col.requested = requested;
         col.report = "";
@@ -505,6 +535,8 @@ ACTION works::submitreport(name proposal_name, string report) {
     check(ms.status == "voting"_n || ms.status == "passed"_n || ms.status == "failed"_n, "milestone must be voting, passed, or failed to submit report");
     check(report != "", "report cannot be empty");
 
+    //TODO: further report validation
+
     //update milestone
     milestones.modify(ms, same_payer, [&](auto& col) {
         col.report = report;
@@ -534,6 +566,8 @@ ACTION works::claimfunds(name proposal_name) {
     check(ms.status == "passed"_n, "milestone must be passed to claim funds");
     check(ms.report != "", "must submit report to claim funds");
 
+    //TODO: further report validation
+
     //update milestone
     milestones.modify(ms, same_payer, [&](auto& col) {
         col.status = name("paid");
@@ -545,9 +579,6 @@ ACTION works::claimfunds(name proposal_name) {
 
     //if final milestone
     if (prop.current_milestone == prop.milestones) {
-
-        //validate
-        check(new_remaining == asset(0, TLOS_SYM), "invalid remaining amount");
 
         //update proposal status to completed
         new_prop_status = "completed"_n;
@@ -592,6 +623,7 @@ ACTION works::nextms(name proposal_name, name ballot_name) {
     auto conf = configs.get();
 
     //validate
+    check(prop.status != "failed"_n, "cannot advance a failed proposal");
     check(prop.current_milestone < prop.milestones, "no milestones left");
     check(next_ms.status == "queued"_n, "next milestone must be queued to advance");
     check(last_ms_status == name("failed") || last_ms_status == name("paid"), "last milestone must be failed or paid to advance");
@@ -663,14 +695,12 @@ ACTION works::withdraw(name account_name, asset quantity) {
     //authenticate
     require_auth(account_name);
 
-    //open accounts table, get account
-    accounts_table accounts(get_self(), account_name.value);
-    auto& acct = accounts.get(TLOS_SYM.code().raw(), "account not found");
-
     //validate
     check(quantity.symbol == TLOS_SYM, "must withdraw TLOS");
     check(quantity.amount > 0, "must withdraw positive amount");
-    check(quantity.amount <= acct.balance.amount, "insufficient funds");
+
+    //subtract balance from account
+    sub_balance(account_name, quantity);
 
     //inline transfer
     action(permission_level{get_self(), name("active")}, name("eosio.token"), name("transfer"), make_tuple(
@@ -827,6 +857,7 @@ void works::catch_broadcast(name ballot_name, map<name, asset> final_results, ui
                     //update config funds
                     conf.available_funds -= by_ballot_itr->total_requested;
                     conf.reserved_funds += by_ballot_itr->total_requested;
+                    configs.set(conf, get_self());
 
                     //update remaining funds
                     new_remaining = by_ballot_itr->total_requested;
@@ -886,7 +917,7 @@ void works::sub_balance(name account_owner, asset quantity) {
     auto& acct = accounts.get(TLOS_SYM.code().raw(), "sub_balance: account not found");
 
     //validate
-    check(acct.balance >= quantity, "sub_balance: insufficient funds >>> amount: " + quantity.to_string());
+    check(acct.balance >= quantity, "sub_balance: insufficient funds >>> needed: " + asset(quantity.amount - acct.balance.amount, TLOS_SYM).to_string());
 
     //subtract quantity from balance
     accounts.modify(acct, same_payer, [&](auto& col) {

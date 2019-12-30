@@ -160,7 +160,7 @@ CONTRACT works : public contract {
         name category; //marketing, apps, developers, education
         name status; //drafting, inprogress, failed, cancelled, completed
         name current_ballot; //name of current milestone ballot
-        asset fee; //fee paid to make proposal
+        asset fee; //fee paid to launch proposal
         bool refunded; //true if fee refunded
         asset total_requested; //total funds requested
         asset remaining; //total remaining funds
