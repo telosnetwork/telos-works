@@ -1,5 +1,7 @@
 #include "../include/works.hpp"
 
+using namespace trailservice;
+
 //======================== admin actions ========================
 
 ACTION works::init(string app_name, string app_version, name initial_admin) {
@@ -21,6 +23,7 @@ ACTION works::init(string app_name, string app_version, name initial_admin) {
         initial_admin, //admin
         asset(0, TLOS_SYM), //available_funds
         asset(0, TLOS_SYM), //reserved_funds
+        asset(0, TLOS_SYM), //deposited_funds
         asset(0, TLOS_SYM), //paid_funds
         double(5.0), //quorum_threshold
         double(50.0), //yes_threshold
@@ -74,7 +77,7 @@ ACTION works::setadmin(name new_admin) {
 
 }
 
-ACTION works::fix() {
+// ACTION works::fix() {
 
     // proposals_table proposals(get_self(), get_self().value);
     // auto& prop = proposals.get(name("workspropf").value, "prop not found");
@@ -113,7 +116,7 @@ ACTION works::fix() {
     //     col.ballot_results = final_results;
     // });
 
-}
+// }
 
 //======================== proposal actions ========================
 
@@ -210,23 +213,12 @@ ACTION works::draftprop(string title, string description, string content, name p
     )).send();
 
     //send inline newballot
-    action(permission_level{get_self(), name("active")}, name("trailservice"), name("newballot"), make_tuple(
-        proposal_name, //ballot_name
-        name("proposal"), //category
-        get_self(), //publisher
-        VOTE_SYM, //treasury_symbol
-        name("1token1vote"), //voting_method
-        ballot_options //initial_options
-    )).send();
-
+    trail::newballot_action newballot_act(DECIDE_N, { get_self(), ACTIVE_PERM_N });
+    newballot_act.send(proposal_name, name("proposal"), get_self(), VOTE_SYM, name("1token1vote"), ballot_options);
+    
     //send inline editdetails
-    action(permission_level{get_self(), name("active")}, name("trailservice"), name("editdetails"), make_tuple(
-        proposal_name, //ballot_name
-        title, //title
-        description, //description
-        content //content
-    )).send();
-
+    trail::editdetails_action editdetails_act(DECIDE_N, { get_self(), ACTIVE_PERM_N });
+    editdetails_act.send(proposal_name, title, description, content);
 }
 
 ACTION works::launchprop(name proposal_name) {
@@ -279,17 +271,12 @@ ACTION works::launchprop(name proposal_name) {
     time_point_sec ballot_end_time = now + conf.milestone_length;
 
     //toggle ballot votestake on (default is off)
-    action(permission_level{get_self(), name("active")}, name("trailservice"), name("togglebal"), make_tuple(
-        proposal_name, //ballot_name
-        name("votestake") //setting_name
-    )).send();
-
+    trail::togglebal_action togglebal_act(DECIDE_N, { get_self(), ACTIVE_PERM_N });
+    togglebal_act.send(proposal_name, name("votestake"));
+    
     //send inline openvoting
-    action(permission_level{get_self(), name("active")}, name("trailservice"), name("openvoting"), make_tuple(
-        proposal_name, //ballot_name
-        ballot_end_time //end_time
-    )).send();
-
+    trail::openvoting_action openvoting_act(DECIDE_N, { get_self(), ACTIVE_PERM_N });
+    openvoting_act.send(proposal_name, ballot_end_time);
 }
 
 ACTION works::cancelprop(name proposal_name, string memo) {
@@ -319,10 +306,8 @@ ACTION works::cancelprop(name proposal_name, string memo) {
     }
 
     //send inline cancelballot
-    action(permission_level{get_self(), name("active")}, name("trailservice"), name("cancelballot"), make_tuple(
-        prop.current_ballot, //ballot_name
-        string("Telos Works Cancel Ballot") //memo
-    )).send();
+    trail::cancelballot_action cancelballot_act(DECIDE_N, { get_self(), ACTIVE_PERM_N });
+    cancelballot_act.send(prop.current_ballot, string("Telos Works Cancel Ballot"));
 
     //modify proposal
     proposals.modify(prop, same_payer, [&](auto& col) {
@@ -508,12 +493,10 @@ ACTION works::closems(name proposal_name) {
     check(prop.status == "inprogress"_n, "proposal must be in progress to close milestone");
     check(ms.status == "voting"_n, "milestone must be voting to close");
     check(prop.current_ballot == ms.ballot_name, "current ballot and milestone ballot mismatch");
-
+    
     //send inline closeballot
-    action(permission_level{get_self(), name("active")}, name("trailservice"), name("closevoting"), make_tuple(
-        ms.ballot_name, //ballot_name
-        true //broadcast
-    )).send();
+    trail::closevoting_action closevoting_act(DECIDE_N, { get_self(), ACTIVE_PERM_N });
+    closevoting_act.send(ms.ballot_name, true);
 
 }
 
@@ -657,34 +640,20 @@ ACTION works::nextms(name proposal_name, name ballot_name) {
     )).send();
 
     //send inline newballot
-    action(permission_level{get_self(), name("active")}, name("trailservice"), name("newballot"), make_tuple(
-        ballot_name, //ballot_name
-        name("proposal"), //category
-        get_self(), //publisher
-        VOTE_SYM, //treasury_symbol
-        name("1token1vote"), //voting_method
-        ballot_options //initial_options
-    )).send();
+    trail::newballot_action newballot_act(DECIDE_N, { get_self(), ACTIVE_PERM_N });
+    newballot_act.send(ballot_name, name("proposal"), get_self(), VOTE_SYM, name("1token1vote"), ballot_options);
 
     //send inline editdetails
-    action(permission_level{get_self(), name("active")}, name("trailservice"), name("editdetails"), make_tuple(
-        ballot_name, //ballot_name
-        prop.title, //title
-        prop.description, //description
-        prop.content //content
-    )).send();
+    trail::editdetails_action editdetails_act(DECIDE_N, { get_self(), ACTIVE_PERM_N });
+    editdetails_act.send(ballot_name, prop.title, prop.description, prop.content);
 
     //toggle ballot votestake on (default is off)
-    action(permission_level{get_self(), name("active")}, name("trailservice"), name("togglebal"), make_tuple(
-        ballot_name, //ballot_name
-        name("votestake") //setting_name
-    )).send();
+    trail::togglebal_action togglebal_act(DECIDE_N, { get_self(), ACTIVE_PERM_N });
+    togglebal_act.send(ballot_name, name("votestake"));
 
     //send inline openvoting
-    action(permission_level{get_self(), name("active")}, name("trailservice"), name("openvoting"), make_tuple(
-        ballot_name, //ballot_name
-        ballot_end_time //end_time
-    )).send();
+    trail::openvoting_action openvoting_act(DECIDE_N, { get_self(), ACTIVE_PERM_N });
+    openvoting_act.send(ballot_name, ballot_end_time);
 
 }
 
@@ -745,14 +714,13 @@ void works::catch_transfer(name from, name to, asset quantity, string memo) {
             return;
         }
 
+        //open config singleton, get config
+        config_singleton configs(get_self(), get_self().value);
+        auto conf = configs.get();
+
         //adds to available funds
         if (memo == std::string("fund")) { 
-            
-            //open config singleton, get config
-            config_singleton configs(get_self(), get_self().value);
-            auto conf = configs.get();
-
-            //udpate available funds
+            //update available funds
             conf.available_funds += quantity;
 
             //set new config
@@ -766,23 +734,31 @@ void works::catch_transfer(name from, name to, asset quantity, string memo) {
 
             //emplace account if not found, update if exists
             if (acct == accounts.end()) {
-
                 //make new account
                 accounts.emplace(get_self(), [&](auto& col) {
                     col.balance = quantity;
                 });
-
             } else {
-
                 //update existing account
                 accounts.modify(*acct, same_payer, [&](auto& col) {
                     col.balance += quantity;
                 });
 
             }
+            conf.deposited_funds += quantity;
 
+            configs.set(conf, get_self());
         }
 
+    } else if (rec == "eosio.token"_n && from == get_self() && quantity.symbol == TLOS_SYM) {
+        config_singleton configs(get_self(), get_self().value);
+        auto conf = configs.get();
+
+        asset self_balance = conf.deposited_funds + conf.available_funds;
+
+        asset total_transferable = (self_balance + quantity) - conf.deposited_funds;
+        
+        check(total_transferable >= quantity, "trailservice lacks the liquid TLOS to make this transfer");
     }
 
 }
@@ -924,6 +900,12 @@ void works::sub_balance(name account_owner, asset quantity) {
         col.balance -= quantity;
     });
 
+    config_singleton configs(get_self(), get_self().value);
+    auto conf = configs.get();
+
+    conf.deposited_funds -= quantity;
+
+    configs.set(conf, get_self());
 }
 
 void works::add_balance(name account_owner, asset quantity) {
@@ -937,6 +919,12 @@ void works::add_balance(name account_owner, asset quantity) {
         col.balance += quantity;
     });
 
+    config_singleton configs(get_self(), get_self().value);
+    auto conf = configs.get();
+
+    conf.deposited_funds += quantity;
+
+    configs.set(conf, get_self());
 }
 
 bool works::valid_category(name category) {

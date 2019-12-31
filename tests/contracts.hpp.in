@@ -1,0 +1,27 @@
+#pragma once
+#include <eosio/testing/tester.hpp>
+
+namespace trail {
+    namespace testing {
+        using namespace std;
+        using namespace eosio::testing;
+
+        struct contracts {
+            // NOTE: this repos works contract
+            static vector<uint8_t> works_wasm() { return read_wasm("${CMAKE_BINARY_DIR}/../contracts/works/works.wasm"); }
+            static vector<char> works_abi() { return read_abi("${CMAKE_BINARY_DIR}/../contracts/works/works.abi"); }
+
+            // NOTE: telos-decide v2.0.0-RC2
+            static vector<uint8_t> trail_wasm() { return read_wasm("${CMAKE_BINARY_DIR}/contracts/telos-decide/trail.wasm"); }
+            static vector<char> trail_abi() { return read_abi("${CMAKE_BINARY_DIR}/contracts/telos-decide/trail.abi"); }
+
+            // NOTE: eosio.system from telos.contracts v1.8.0
+            static vector<uint8_t> sys_wasm() { return read_wasm("${CMAKE_BINARY_DIR}/contracts/eosio.system/eosio.system.wasm"); }
+            static vector<char> sys_abi() { return read_abi("${CMAKE_BINARY_DIR}/contracts/eosio.system/eosio.system.abi"); }
+
+            // NOTE: eosio.token from telos.contracts v1.8.0
+            static vector<uint8_t> token_wasm() { return read_wasm("${CMAKE_BINARY_DIR}/contracts/eosio.token/eosio.token.wasm"); }
+            static vector<char> token_abi() { return read_abi("${CMAKE_BINARY_DIR}/contracts/eosio.token/eosio.token.abi"); }
+        };
+    }
+}

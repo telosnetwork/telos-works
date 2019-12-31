@@ -7,6 +7,7 @@
 #include <eosio/eosio.hpp>
 #include <eosio/singleton.hpp>
 #include <eosio/asset.hpp>
+#include <trail.hpp>
 
 using namespace std;
 using namespace eosio;
@@ -27,6 +28,8 @@ CONTRACT works : public contract {
 
     ~works() {}
 
+    static constexpr name DECIDE_N = "trailservice"_n;
+    static constexpr name ACTIVE_PERM_N = "active"_n;
     const symbol TLOS_SYM = symbol("TLOS", 4);
     const symbol VOTE_SYM = symbol("VOTE", 4);
 
@@ -41,7 +44,7 @@ CONTRACT works : public contract {
     //set new admin
     ACTION setadmin(name new_admin);
 
-    ACTION fix();
+    // ACTION fix();
 
     //TODO: actions to change config settings
 
@@ -123,6 +126,7 @@ CONTRACT works : public contract {
 
         asset available_funds; //total available funding for proposals
         asset reserved_funds; //total funding reserved by approved proposals
+        asset deposited_funds; //total deposited funds made by accounts
         asset paid_funds; //total lifetime funding paid
 
         double quorum_threshold; //percent of votes to pass quorum
@@ -142,7 +146,7 @@ CONTRACT works : public contract {
         asset max_requested; //500k TLOS
 
         EOSLIB_SERIALIZE(config, (app_name)(app_version)(admin)
-            (available_funds)(reserved_funds)(paid_funds)
+            (available_funds)(reserved_funds)(deposited_funds)(paid_funds)
             (quorum_threshold)(yes_threshold)(quorum_refund_threshold)(yes_refund_threshold)
             (min_fee)(fee_percent)(min_milestones)(max_milestones)(milestone_length)
             (min_requested)(max_requested))
@@ -212,6 +216,7 @@ CONTRACT works : public contract {
     typedef multi_index<name("accounts"), account> accounts_table;
 
     //telos decide treasury
+    // TODO: import from trail
     struct treasury {
         asset supply;
         asset max_supply;
