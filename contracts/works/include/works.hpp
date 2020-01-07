@@ -44,8 +44,6 @@ CONTRACT works : public contract {
     //set new admin
     ACTION setadmin(name new_admin);
 
-    // ACTION fix();
-
     //TODO: actions to change config settings
 
     //======================== proposal actions ========================

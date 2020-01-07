@@ -15,7 +15,7 @@ include(ExternalProject)
 
 find_package(eosio.cdt)
 
-message(STATUS "Building trail-service v${VERSION_FULL}")
+message(STATUS "Building Telos Works v${VERSION_FULL}")
 
 set(EOSIO_CDT_VERSION_MIN "1.6")
 set(EOSIO_CDT_VERSION_SOFT_MAX "1.6")

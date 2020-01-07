@@ -77,47 +77,6 @@ ACTION works::setadmin(name new_admin) {
 
 }
 
-// ACTION works::fix() {
-
-    // proposals_table proposals(get_self(), get_self().value);
-    // auto& prop = proposals.get(name("workspropf").value, "prop not found");
-
-    // milestones_table milestones(get_self(), name("wrokspropb").value);
-    // auto& ms = milestones.get(uint64_t(1), "milestone not found");
-
-    // milestones.erase(ms);
-
-    // config_singleton configs(get_self(), get_self().value);
-    // auto conf = configs.get();
-
-    // conf.available_funds -= asset(12000000, TLOS_SYM);
-    // conf.reserved_funds += asset(12000000, TLOS_SYM);
-    // configs.set(conf, get_self());
-
-    // sub_balance(name("amendtester1"), asset(100000, TLOS_SYM));
-    
-    // add_balance("amendtester1"_n, asset(600000, TLOS_SYM));
-
-    // proposals.modify(prop, same_payer, [&](auto& col) {
-    //     col.fee = asset(0, TLOS_SYM);
-    // });
-
-    // map<name, asset> final_results;
-    // final_results["yes"_n] = asset(0, TLOS_SYM);
-    // final_results["no"_n] = asset(0, TLOS_SYM);
-    // final_results["abstain"_n] = asset(0, TLOS_SYM);
-
-    // milestones.emplace(get_self(), [&](auto& col) {
-    //     col.milestone_id = 1;
-    //     col.status = "failed"_n;
-    //     col.requested = asset(10000, TLOS_SYM);
-    //     col.report = "";
-    //     col.ballot_name = "wrokspropb"_n;
-    //     col.ballot_results = final_results;
-    // });
-
-// }
-
 //======================== proposal actions ========================
 
 ACTION works::draftprop(string title, string description, string content, name proposal_name, name proposer, name category, asset total_requested, optional<uint16_t> milestones) {
