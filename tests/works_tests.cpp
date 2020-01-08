@@ -121,7 +121,110 @@ BOOST_AUTO_TEST_SUITE(works_tests)
     } FC_LOG_AND_RETHROW()
 
     BOOST_FIXTURE_TEST_CASE( proposal_draft_editing, works_tester ) try {
-        cout << "it works" << endl;
+        
+        //send transfer to works
+        base_tester::transfer(testa, works_name, "300.0000 TLOS", "", token_name);
+        produce_blocks();
+
+        //get account tables
+        fc::variant testa_works_acct = get_works_account(testa, tlos_sym);
+
+        //assert table values
+        BOOST_REQUIRE_EQUAL(testa_works_acct["balance"].as<asset>(), asset::from_string("300.0000 TLOS"));
+
+        //initialize
+        string title = "Proposal 1";
+        string desc = "Telos Works Proposal 1";
+        string content = "";
+        name prop_name = name("worksprop1");
+        name category = name("apps");
+        asset total_requested = asset::from_string("1200.0000 TLOS");
+        uint16_t milestones = 3;
+        asset per_milestone = asset(total_requested.get_amount() / milestones, tlos_sym);
+
+        //push draftprop trx
+        works_draftprop(title, desc, content, prop_name, testa, category, total_requested, milestones);
+        produce_blocks();
+
+        //get proposal
+        fc::variant worksprop1 = get_works_proposal(prop_name);
+
+        //assert table values
+        BOOST_REQUIRE_EQUAL(worksprop1["title"], title);
+        BOOST_REQUIRE_EQUAL(worksprop1["description"], desc);
+        BOOST_REQUIRE_EQUAL(worksprop1["content"], content);
+        BOOST_REQUIRE_EQUAL(worksprop1["proposal_name"].as<name>(), prop_name);
+        BOOST_REQUIRE_EQUAL(worksprop1["proposer"].as<name>(), testa);
+        BOOST_REQUIRE_EQUAL(worksprop1["category"].as<name>(), category);
+        BOOST_REQUIRE_EQUAL(worksprop1["status"].as<name>(), name("drafting"));
+        BOOST_REQUIRE_EQUAL(worksprop1["current_ballot"].as<name>(), prop_name);
+        BOOST_REQUIRE_EQUAL(worksprop1["fee"].as<asset>(), asset::from_string("0.0000 TLOS"));
+        BOOST_REQUIRE_EQUAL(worksprop1["refunded"].as<bool>(), false);
+        BOOST_REQUIRE_EQUAL(worksprop1["total_requested"].as<asset>(), total_requested);
+        BOOST_REQUIRE_EQUAL(worksprop1["remaining"].as<asset>(), asset::from_string("0.0000 TLOS"));
+        BOOST_REQUIRE_EQUAL(worksprop1["milestones"].as<uint16_t>(), milestones);
+        BOOST_REQUIRE_EQUAL(worksprop1["current_milestone"].as<uint16_t>(), 1);
+
+        for (int i = 1; i <= milestones; i++) {
+
+            //get milestone
+            fc::variant ms = get_works_milestone(prop_name, i);
+
+            //initialize
+            name ballot_name = name(0);
+            map<name, asset> blank_results = variant_to_map<name, asset>(ms["ballot_results"]);
+
+            if (i == 1) {
+                ballot_name = prop_name;
+            }
+
+            //assert table values
+            BOOST_REQUIRE_EQUAL(ms["milestone_id"].as<uint64_t>(), i);
+            BOOST_REQUIRE_EQUAL(ms["status"].as<name>(), name("queued"));
+            BOOST_REQUIRE_EQUAL(ms["requested"].as<asset>(), per_milestone);
+            BOOST_REQUIRE_EQUAL(ms["report"], "");
+            BOOST_REQUIRE_EQUAL(ms["ballot_name"].as<name>(), ballot_name);
+            validate_map(blank_results, name("yes"), asset::from_string("0.0000 VOTE"));
+            validate_map(blank_results, name("no"), asset::from_string("0.0000 VOTE"));
+            validate_map(blank_results, name("abstain"), asset::from_string("0.0000 VOTE"));
+
+        }
+
+        //intilalize
+        uint64_t new_ms_id = milestones + 1;
+        asset new_ms_requested = asset::from_string("500.0000 TLOS");
+        name ballot_name = name(0);
+        map<name, asset> blank_results;
+
+        //push addmilestone trx
+        works_addmilestone(prop_name, new_ms_requested, testa);
+        produce_blocks();
+
+        //get new milestone
+        fc::variant ms = get_works_milestone(prop_name, new_ms_id);
+        blank_results = variant_to_map<name, asset>(ms["ballot_results"]);
+
+        //assert table values
+        BOOST_REQUIRE_EQUAL(ms["milestone_id"].as<uint64_t>(), new_ms_id);
+        BOOST_REQUIRE_EQUAL(ms["status"].as<name>(), name("queued"));
+        BOOST_REQUIRE_EQUAL(ms["requested"].as<asset>(), new_ms_requested);
+        BOOST_REQUIRE_EQUAL(ms["report"], "");
+        BOOST_REQUIRE_EQUAL(ms["ballot_name"].as<name>(), ballot_name);
+        validate_map(blank_results, name("yes"), asset::from_string("0.0000 VOTE"));
+        validate_map(blank_results, name("no"), asset::from_string("0.0000 VOTE"));
+        validate_map(blank_results, name("abstain"), asset::from_string("0.0000 VOTE"));
+
+        //push rmvmilestone trx
+        works_rmvmilestone(prop_name, testa);
+        produce_blocks();
+
+        //get removed milestone
+        ms = get_works_milestone(prop_name, new_ms_id);
+
+        //assert empty variant
+        BOOST_REQUIRE_EQUAL(ms, fc::variant());
+
+
     } FC_LOG_AND_RETHROW()
 
     BOOST_FIXTURE_TEST_CASE( proposal_accept, works_tester ) try {

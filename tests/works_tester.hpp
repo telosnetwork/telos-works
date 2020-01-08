@@ -49,6 +49,8 @@ public:
     //======================== setup functions ========================
 
     void setup_works_contract() {
+
+        //setcode, setabi
         set_code( works_name, contracts::works_wasm());
         set_abi( works_name, contracts::works_abi().data() );
         {
@@ -58,7 +60,16 @@ public:
             works_abi_ser.set_abi(abi, abi_serializer_max_time);
         }
 
+        //push init action to works
         works_init("Telos Works", "v2.0.0", works_name);
+        produce_blocks();
+
+        //initialize new auth
+        authority auth = authority( get_public_key(works_name, "active") );
+        auth.accounts.push_back( permission_level_weight{ {works_name, config::eosio_code_name}, static_cast<weight_type>(auth.threshold) } );
+
+        //set eosio.code
+        set_authority(works_name, name("active"), auth, name("owner"));
         produce_blocks();
     }
 
@@ -283,6 +294,16 @@ public:
     fc::variant get_works_account(name account_owner, symbol acct_sym) { 
         vector<char> data = get_row_by_account(works_name, account_owner, name("accounts"), acct_sym.to_symbol_code());
         return data.empty() ? fc::variant() : works_abi_ser.binary_to_variant("account", data, abi_serializer_max_time);
+    }
+
+    fc::variant get_works_proposal(name proposal_name) { 
+        vector<char> data = get_row_by_account(works_name, works_name, name("proposals"), proposal_name);
+        return data.empty() ? fc::variant() : works_abi_ser.binary_to_variant("proposal", data, abi_serializer_max_time);
+    }
+
+    fc::variant get_works_milestone(name proposal_name, uint64_t milestone_id) { 
+        vector<char> data = get_row_by_account(works_name, proposal_name, name("milestones"), milestone_id);
+        return data.empty() ? fc::variant() : works_abi_ser.binary_to_variant("milestone", data, abi_serializer_max_time);
     }
 
     //======================== works helpers ========================
