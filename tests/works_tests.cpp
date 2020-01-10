@@ -332,7 +332,7 @@ BOOST_AUTO_TEST_SUITE(works_tests)
         name category = name("apps");
         asset total_requested = asset::from_string("1200.0000 TLOS");
         uint16_t milestones = 3;
-        asset per_milestone = asset(total_requested.get_amount() / milestones, tlos_sym);
+        asset per_milestone = asset(total_requested.get_amount() / milestones, tlos_sym); //400 TLOS per
 
         //push draftprop trx
         works_draftprop(title, desc, content, prop_name, testa, category, total_requested, milestones);
@@ -421,7 +421,12 @@ BOOST_AUTO_TEST_SUITE(works_tests)
 
         //======================== vote ========================
 
-        
+        //initialize
+        vector<name> yes_vote = { name("yes") };
+
+        //cast votes
+        cast_vote(testa, prop_name, yes_vote);
+        produce_blocks();
 
     } FC_LOG_AND_RETHROW()
 

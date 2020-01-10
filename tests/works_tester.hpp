@@ -41,8 +41,20 @@ public:
         new_treasury(eosio_name, max_vote_supply, name("public"));
         produce_blocks();
 
-        //register as voter on telos decide
+        //register works as voter on telos decide
         reg_voter(works_name, max_vote_supply.get_symbol(), {});
+        produce_blocks();
+
+        //delegate bw for test accounts
+        delegate_bw(testa, testa, asset::from_string("10.0000 TLOS"), asset::from_string("90.0000 TLOS"), false);
+        delegate_bw(testb, testb, asset::from_string("10.0000 TLOS"), asset::from_string("40.0000 TLOS"), false);
+        delegate_bw(testc, testc, asset::from_string("10.0000 TLOS"), asset::from_string("340.0000 TLOS"), false);
+        produce_blocks();
+
+        //register voters on telos decide
+        reg_voter(testa, max_vote_supply.get_symbol(), {});
+        reg_voter(testb, max_vote_supply.get_symbol(), {});
+        reg_voter(testc, max_vote_supply.get_symbol(), {});
         produce_blocks();
 
         //fund telos works
