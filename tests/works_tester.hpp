@@ -44,6 +44,11 @@ public:
         //register as voter on telos decide
         reg_voter(works_name, max_vote_supply.get_symbol(), {});
         produce_blocks();
+
+        //fund telos works
+        base_tester::transfer(eosio_name, works_name, "100000.0000 TLOS", "fund", token_name);
+        produce_blocks();
+
     }
 
     //======================== setup functions ========================

@@ -33,7 +33,7 @@ ACTION works::init(string app_name, string app_version, name initial_admin) {
         double(5.0), //fee_percent
         uint16_t(1), //min_milestones
         uint16_t(12), //max_milestones
-        uint32_t(300), //milestone_length
+        uint32_t(2505600), //milestone_length
         asset(10000000, TLOS_SYM), //min_requested
         asset(5000000000, TLOS_SYM) //max_requested
     };
@@ -128,7 +128,6 @@ ACTION works::draftprop(string title, string description, string content, name p
     blank_results["yes"_n] = asset(0, VOTE_SYM);
     blank_results["no"_n] = asset(0, VOTE_SYM);
     blank_results["abstain"_n] = asset(0, VOTE_SYM);
-    time_point_sec now = time_point_sec(current_time_point());
 
     //emplace each milestone
     for (uint16_t i = 1; i <= milestone_count; i++) {
@@ -155,29 +154,6 @@ ACTION works::draftprop(string title, string description, string content, name p
 
     }
 
-    //intialize
-    vector<name> ballot_options = { name("yes"), name("no"), name("abstain") };
-    time_point_sec ballot_end_time = now + conf.milestone_length;
-    asset newballot_fee = asset(300000, TLOS_SYM); //TODO: get from trailservice config table
-
-    //charge newballot fee
-    sub_balance(proposer, newballot_fee);
-
-    //send transfer inline to pay for newballot fee
-    action(permission_level{get_self(), name("active")}, name("eosio.token"), name("transfer"), make_tuple(
-        get_self(), //from
-        name("trailservice"), //to
-        newballot_fee, //quantity
-        string("Telos Works Ballot Fee Payment") //memo
-    )).send();
-
-    //send inline newballot
-    trail::newballot_action newballot_act(DECIDE_N, { get_self(), ACTIVE_PERM_N });
-    newballot_act.send(proposal_name, name("proposal"), get_self(), VOTE_SYM, name("1token1vote"), ballot_options);
-    
-    //send inline editdetails
-    trail::editdetails_action editdetails_act(DECIDE_N, { get_self(), ACTIVE_PERM_N });
-    editdetails_act.send(proposal_name, title, description, content);
 }
 
 ACTION works::launchprop(name proposal_name) {
@@ -199,13 +175,17 @@ ACTION works::launchprop(name proposal_name) {
 
     //initialize
     asset proposal_fee = asset(int64_t(prop.total_requested.amount * conf.fee_percent / 100), TLOS_SYM);
+    asset newballot_fee = asset(300000, TLOS_SYM); //TODO: get from trailservice config table
+    time_point_sec now = time_point_sec(current_time_point());
+    time_point_sec ballot_end_time = now + conf.milestone_length;
+    vector<name> ballot_options = { name("yes"), name("no"), name("abstain") };
 
     if (proposal_fee < conf.min_fee) {
         proposal_fee = conf.min_fee;
     }
 
-    //charge proposal fee
-    sub_balance(prop.proposer, proposal_fee);
+    //charge proposal fee and newballot_fee
+    sub_balance(prop.proposer, proposal_fee + newballot_fee);
 
     //validate
     check(prop.status == "drafting"_n, "proposal must be in drafting mode to launch");
@@ -213,6 +193,7 @@ ACTION works::launchprop(name proposal_name) {
     check(prop.milestones <= conf.max_milestones, "milestones is more than maximum allowed");
     check(prop.current_milestone == 1, "proposal must be in its first milestone to launch");
     check(ms.status == "queued"_n, "milestone must be queued to start");
+    check(conf.deposited_funds >= proposal_fee + newballot_fee, "not enough deposited funds");
 
     //update proposal
     proposals.modify(prop, same_payer, [&](auto& col) {
@@ -225,9 +206,25 @@ ACTION works::launchprop(name proposal_name) {
         col.status = name("voting");
     });
 
-    //initialize
-    time_point_sec now = time_point_sec(current_time_point());
-    time_point_sec ballot_end_time = now + conf.milestone_length;
+    //update and set config
+    conf.deposited_funds -= (proposal_fee + newballot_fee);
+    configs.set(conf, get_self());
+
+    //send transfer inline to pay for newballot fee
+    action(permission_level{get_self(), name("active")}, name("eosio.token"), name("transfer"), make_tuple(
+        get_self(), //from
+        name("trailservice"), //to
+        newballot_fee, //quantity
+        string("Telos Works Ballot Fee Payment") //memo
+    )).send();
+
+    //send inline newballot
+    trail::newballot_action newballot_act(DECIDE_N, { get_self(), ACTIVE_PERM_N });
+    newballot_act.send(proposal_name, name("proposal"), get_self(), VOTE_SYM, name("1token1vote"), ballot_options);
+    
+    //send inline editdetails
+    trail::editdetails_action editdetails_act(DECIDE_N, { get_self(), ACTIVE_PERM_N });
+    editdetails_act.send(proposal_name, prop.title, prop.description, prop.content);
 
     //toggle ballot votestake on (default is off)
     trail::togglebal_action togglebal_act(DECIDE_N, { get_self(), ACTIVE_PERM_N });
@@ -236,6 +233,7 @@ ACTION works::launchprop(name proposal_name) {
     //send inline openvoting
     trail::openvoting_action openvoting_act(DECIDE_N, { get_self(), ACTIVE_PERM_N });
     openvoting_act.send(proposal_name, ballot_end_time);
+
 }
 
 ACTION works::cancelprop(name proposal_name, string memo) {
@@ -679,6 +677,7 @@ void works::catch_transfer(name from, name to, asset quantity, string memo) {
 
         //adds to available funds
         if (memo == std::string("fund")) { 
+            
             //update available funds
             conf.available_funds += quantity;
 
@@ -710,14 +709,18 @@ void works::catch_transfer(name from, name to, asset quantity, string memo) {
         }
 
     } else if (rec == "eosio.token"_n && from == get_self() && quantity.symbol == TLOS_SYM) {
+        
+        //open configs singleton, get config
         config_singleton configs(get_self(), get_self().value);
         auto conf = configs.get();
 
+        //initialize
         asset self_balance = conf.deposited_funds + conf.available_funds;
-
         asset total_transferable = (self_balance + quantity) - conf.deposited_funds;
         
-        check(total_transferable >= quantity, "trailservice lacks the liquid TLOS to make this transfer");
+        //validate
+        check(total_transferable >= quantity, "Telos Decide lacks the liquid TLOS to make this transfer");
+
     }
 
 }
