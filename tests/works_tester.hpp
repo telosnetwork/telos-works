@@ -57,6 +57,12 @@ public:
         reg_voter(testc, max_vote_supply.get_symbol(), {});
         produce_blocks();
 
+        //get voter balances
+        fc::variant testa_votes = get_voter(testa, vote_sym);
+
+        //assert VOTE balances
+        BOOST_REQUIRE_EQUAL(testa_votes["staked"].as<asset>(), asset::from_string("100.0000 TLOS"));
+
         //fund telos works
         base_tester::transfer(eosio_name, works_name, "100000.0000 TLOS", "fund", token_name);
         produce_blocks();
