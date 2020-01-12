@@ -61,7 +61,7 @@ public:
         fc::variant testa_votes = get_voter(testa, vote_sym);
 
         //assert VOTE balances
-        BOOST_REQUIRE_EQUAL(testa_votes["staked"].as<asset>(), asset::from_string("100.0000 VOTE"));
+        BOOST_REQUIRE_EQUAL(testa_votes["staked"].as<asset>(), asset::from_string("120.0000 VOTE"));
 
         //fund telos works
         base_tester::transfer(eosio_name, works_name, "100000.0000 TLOS", "fund", token_name);
