@@ -249,7 +249,7 @@ ACTION works::cancelprop(name proposal_name, string memo) {
     check(prop.status == "inprogress"_n, "proposal must be in progress to cancel");
     
     //fail each remaining milestone
-    for (auto i = prop.current_milestone; i != prop.milestones; i++) {
+    for (auto i = prop.current_milestone; i <= prop.milestones; i++) {
 
         //open milestones table
         milestones_table milestones(get_self(), proposal_name.value);
@@ -279,16 +279,18 @@ ACTION works::deleteprop(name proposal_name) {
     proposals_table proposals(get_self(), get_self().value);
     auto& prop = proposals.get(proposal_name.value, "proposal not found");
 
-    //authenticate
-    // require_auth(prop.proposer);
-
     //open config singleton, get config
     config_singleton configs(get_self(), get_self().value);
     auto conf = configs.get();
 
     //validate
-    check(prop.status == "failed"_n || prop.status == "cancelled"_n || prop.status == "completed"_n, 
-        "proposal must be failed, cancelled, or completed to delete");
+    check(prop.status == "drafting"_n || prop.status == "failed"_n || prop.status == "cancelled"_n || prop.status == "completed"_n, 
+        "proposal must be drafting, failed, cancelled, or completed to delete");
+
+    //authenticate
+    if (prop.status == "drafting"_n) {
+        require_auth(prop.proposer);
+    }
 
     //return remaining funds back to available funds
     if (prop.remaining.amount > 0) {
@@ -811,13 +813,6 @@ void works::catch_broadcast(name ballot_name, map<name, asset> final_results, ui
 
                 }
 
-                //update proposal
-                proposals.modify(*by_ballot_itr, same_payer, [&](auto& col) {
-                    col.status = new_prop_status;
-                    col.refunded = refund;
-                    col.remaining = new_remaining;
-                });
-
             } else {
 
                 //execute if current and last milestone both failed
@@ -828,7 +823,16 @@ void works::catch_broadcast(name ballot_name, map<name, asset> final_results, ui
 
                 }
 
+                new_remaining = by_ballot_itr->remaining;
+
             }
+
+            //update proposal
+            proposals.modify(*by_ballot_itr, same_payer, [&](auto& col) {
+                col.status = new_prop_status;
+                col.refunded = refund;
+                col.remaining = new_remaining;
+            });
 
             //update milestone
             milestones.modify(ms, same_payer, [&](auto& col) {
