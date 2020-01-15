@@ -58,10 +58,14 @@ public:
         produce_blocks();
 
         //get voter balances
-        fc::variant testa_votes = get_voter(testa, vote_sym);
+        fc::variant testa_voter = get_voter(testa, vote_sym);
+        fc::variant testb_voter = get_voter(testb, vote_sym);
+        fc::variant testc_voter = get_voter(testc, vote_sym);
 
         //assert VOTE balances
-        BOOST_REQUIRE_EQUAL(testa_votes["staked"].as<asset>(), asset::from_string("120.0000 VOTE"));
+        BOOST_REQUIRE_EQUAL(testa_voter["staked"].as<asset>(), asset::from_string("120.0000 VOTE"));
+        BOOST_REQUIRE_EQUAL(testb_voter["staked"].as<asset>(), asset::from_string("70.0000 VOTE"));
+        BOOST_REQUIRE_EQUAL(testc_voter["staked"].as<asset>(), asset::from_string("370.0000 VOTE"));
 
         //fund telos works
         base_tester::transfer(eosio_name, works_name, "100000.0000 TLOS", "fund", token_name);

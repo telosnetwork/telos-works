@@ -28,7 +28,7 @@ CONTRACT works : public contract {
 
     ~works() {}
 
-    static constexpr name DECIDE_N = "trailservice"_n;
+    static constexpr name DECIDE_N = "trailservice"_n; //TODO: change to telos.decide when purchased
     static constexpr name ACTIVE_PERM_N = "active"_n;
     const symbol TLOS_SYM = symbol("TLOS", 4);
     const symbol VOTE_SYM = symbol("VOTE", 4);

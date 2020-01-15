@@ -227,8 +227,8 @@ ACTION works::launchprop(name proposal_name) {
     editdetails_act.send(proposal_name, prop.title, prop.description, prop.content);
 
     //toggle ballot votestake on (default is off)
-    trail::togglebal_action togglebal_act(DECIDE_N, { get_self(), ACTIVE_PERM_N });
-    togglebal_act.send(proposal_name, name("votestake"));
+    // trail::togglebal_action togglebal_act(DECIDE_N, { get_self(), ACTIVE_PERM_N });
+    // togglebal_act.send(proposal_name, name("votestake"));
     
     //send inline openvoting
     trail::openvoting_action openvoting_act(DECIDE_N, { get_self(), ACTIVE_PERM_N });
@@ -603,10 +603,6 @@ ACTION works::nextms(name proposal_name, name ballot_name) {
     //send inline editdetails
     trail::editdetails_action editdetails_act(DECIDE_N, { get_self(), ACTIVE_PERM_N });
     editdetails_act.send(ballot_name, prop.title, prop.description, prop.content);
-
-    //toggle ballot votestake on (default is off)
-    trail::togglebal_action togglebal_act(DECIDE_N, { get_self(), ACTIVE_PERM_N });
-    togglebal_act.send(ballot_name, name("votestake"));
 
     //send inline openvoting
     trail::openvoting_action openvoting_act(DECIDE_N, { get_self(), ACTIVE_PERM_N });
