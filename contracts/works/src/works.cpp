@@ -1,5 +1,7 @@
 #include "../include/works.hpp"
 
+using namespace decidespace;
+
 //======================== admin actions ========================
 
 ACTION works::init(string app_name, string app_version, name initial_admin) {
@@ -21,6 +23,7 @@ ACTION works::init(string app_name, string app_version, name initial_admin) {
         initial_admin, //admin
         asset(0, TLOS_SYM), //available_funds
         asset(0, TLOS_SYM), //reserved_funds
+        asset(0, TLOS_SYM), //deposited_funds
         asset(0, TLOS_SYM), //paid_funds
         double(5.0), //quorum_threshold
         double(50.0), //yes_threshold
@@ -30,7 +33,7 @@ ACTION works::init(string app_name, string app_version, name initial_admin) {
         double(5.0), //fee_percent
         uint16_t(1), //min_milestones
         uint16_t(12), //max_milestones
-        uint32_t(300), //milestone_length
+        uint32_t(2505600), //milestone_length
         asset(10000000, TLOS_SYM), //min_requested
         asset(5000000000, TLOS_SYM) //max_requested
     };
@@ -71,47 +74,6 @@ ACTION works::setadmin(name new_admin) {
 
     //set new config
     configs.set(conf, get_self());
-
-}
-
-ACTION works::fix() {
-
-    // proposals_table proposals(get_self(), get_self().value);
-    // auto& prop = proposals.get(name("workspropf").value, "prop not found");
-
-    // milestones_table milestones(get_self(), name("wrokspropb").value);
-    // auto& ms = milestones.get(uint64_t(1), "milestone not found");
-
-    // milestones.erase(ms);
-
-    // config_singleton configs(get_self(), get_self().value);
-    // auto conf = configs.get();
-
-    // conf.available_funds -= asset(12000000, TLOS_SYM);
-    // conf.reserved_funds += asset(12000000, TLOS_SYM);
-    // configs.set(conf, get_self());
-
-    // sub_balance(name("amendtester1"), asset(100000, TLOS_SYM));
-    
-    // add_balance("amendtester1"_n, asset(600000, TLOS_SYM));
-
-    // proposals.modify(prop, same_payer, [&](auto& col) {
-    //     col.fee = asset(0, TLOS_SYM);
-    // });
-
-    // map<name, asset> final_results;
-    // final_results["yes"_n] = asset(0, TLOS_SYM);
-    // final_results["no"_n] = asset(0, TLOS_SYM);
-    // final_results["abstain"_n] = asset(0, TLOS_SYM);
-
-    // milestones.emplace(get_self(), [&](auto& col) {
-    //     col.milestone_id = 1;
-    //     col.status = "failed"_n;
-    //     col.requested = asset(10000, TLOS_SYM);
-    //     col.report = "";
-    //     col.ballot_name = "wrokspropb"_n;
-    //     col.ballot_results = final_results;
-    // });
 
 }
 
@@ -166,7 +128,6 @@ ACTION works::draftprop(string title, string description, string content, name p
     blank_results["yes"_n] = asset(0, VOTE_SYM);
     blank_results["no"_n] = asset(0, VOTE_SYM);
     blank_results["abstain"_n] = asset(0, VOTE_SYM);
-    time_point_sec now = time_point_sec(current_time_point());
 
     //emplace each milestone
     for (uint16_t i = 1; i <= milestone_count; i++) {
@@ -193,40 +154,6 @@ ACTION works::draftprop(string title, string description, string content, name p
 
     }
 
-    //intialize
-    vector<name> ballot_options = { name("yes"), name("no"), name("abstain") };
-    time_point_sec ballot_end_time = now + conf.milestone_length;
-    asset newballot_fee = asset(300000, TLOS_SYM); //TODO: get from trailservice config table
-
-    //charge newballot fee
-    sub_balance(proposer, newballot_fee);
-
-    //send transfer inline to pay for newballot fee
-    action(permission_level{get_self(), name("active")}, name("eosio.token"), name("transfer"), make_tuple(
-        get_self(), //from
-        name("trailservice"), //to
-        newballot_fee, //quantity
-        string("Telos Works Ballot Fee Payment") //memo
-    )).send();
-
-    //send inline newballot
-    action(permission_level{get_self(), name("active")}, name("trailservice"), name("newballot"), make_tuple(
-        proposal_name, //ballot_name
-        name("proposal"), //category
-        get_self(), //publisher
-        VOTE_SYM, //treasury_symbol
-        name("1token1vote"), //voting_method
-        ballot_options //initial_options
-    )).send();
-
-    //send inline editdetails
-    action(permission_level{get_self(), name("active")}, name("trailservice"), name("editdetails"), make_tuple(
-        proposal_name, //ballot_name
-        title, //title
-        description, //description
-        content //content
-    )).send();
-
 }
 
 ACTION works::launchprop(name proposal_name) {
@@ -248,13 +175,17 @@ ACTION works::launchprop(name proposal_name) {
 
     //initialize
     asset proposal_fee = asset(int64_t(prop.total_requested.amount * conf.fee_percent / 100), TLOS_SYM);
+    asset newballot_fee = asset(300000, TLOS_SYM); //TODO: get from telos.decide config table
+    time_point_sec now = time_point_sec(current_time_point());
+    time_point_sec ballot_end_time = now + conf.milestone_length;
+    vector<name> ballot_options = { name("yes"), name("no"), name("abstain") };
 
     if (proposal_fee < conf.min_fee) {
         proposal_fee = conf.min_fee;
     }
 
-    //charge proposal fee
-    sub_balance(prop.proposer, proposal_fee);
+    //charge proposal fee and newballot_fee
+    sub_balance(prop.proposer, proposal_fee + newballot_fee);
 
     //validate
     check(prop.status == "drafting"_n, "proposal must be in drafting mode to launch");
@@ -262,6 +193,7 @@ ACTION works::launchprop(name proposal_name) {
     check(prop.milestones <= conf.max_milestones, "milestones is more than maximum allowed");
     check(prop.current_milestone == 1, "proposal must be in its first milestone to launch");
     check(ms.status == "queued"_n, "milestone must be queued to start");
+    check(conf.deposited_funds >= proposal_fee + newballot_fee, "not enough deposited funds");
 
     //update proposal
     proposals.modify(prop, same_payer, [&](auto& col) {
@@ -274,21 +206,33 @@ ACTION works::launchprop(name proposal_name) {
         col.status = name("voting");
     });
 
-    //initialize
-    time_point_sec now = time_point_sec(current_time_point());
-    time_point_sec ballot_end_time = now + conf.milestone_length;
+    //update and set config
+    conf.deposited_funds -= (proposal_fee + newballot_fee);
+    configs.set(conf, get_self());
+
+    //send transfer inline to pay for newballot fee
+    action(permission_level{get_self(), name("active")}, name("eosio.token"), name("transfer"), make_tuple(
+        get_self(), //from
+        name("telos.decide"), //to
+        newballot_fee, //quantity
+        string("Telos Works Ballot Fee Payment") //memo
+    )).send();
+
+    //send inline newballot
+    decide::newballot_action newballot_act(DECIDE_N, { get_self(), ACTIVE_PERM_N });
+    newballot_act.send(proposal_name, name("proposal"), get_self(), VOTE_SYM, name("1token1vote"), ballot_options);
+    
+    //send inline editdetails
+    decide::editdetails_action editdetails_act(DECIDE_N, { get_self(), ACTIVE_PERM_N });
+    editdetails_act.send(proposal_name, prop.title, prop.description, prop.content);
 
     //toggle ballot votestake on (default is off)
-    action(permission_level{get_self(), name("active")}, name("trailservice"), name("togglebal"), make_tuple(
-        proposal_name, //ballot_name
-        name("votestake") //setting_name
-    )).send();
-
+    decide::togglebal_action togglebal_act(DECIDE_N, { get_self(), ACTIVE_PERM_N });
+    togglebal_act.send(proposal_name, name("votestake"));
+    
     //send inline openvoting
-    action(permission_level{get_self(), name("active")}, name("trailservice"), name("openvoting"), make_tuple(
-        proposal_name, //ballot_name
-        ballot_end_time //end_time
-    )).send();
+    decide::openvoting_action openvoting_act(DECIDE_N, { get_self(), ACTIVE_PERM_N });
+    openvoting_act.send(proposal_name, ballot_end_time);
 
 }
 
@@ -305,7 +249,7 @@ ACTION works::cancelprop(name proposal_name, string memo) {
     check(prop.status == "inprogress"_n, "proposal must be in progress to cancel");
     
     //fail each remaining milestone
-    for (auto i = prop.current_milestone; i != prop.milestones; i++) {
+    for (auto i = prop.current_milestone; i <= prop.milestones; i++) {
 
         //open milestones table
         milestones_table milestones(get_self(), proposal_name.value);
@@ -319,10 +263,8 @@ ACTION works::cancelprop(name proposal_name, string memo) {
     }
 
     //send inline cancelballot
-    action(permission_level{get_self(), name("active")}, name("trailservice"), name("cancelballot"), make_tuple(
-        prop.current_ballot, //ballot_name
-        string("Telos Works Cancel Ballot") //memo
-    )).send();
+    decide::cancelballot_action cancelballot_act(DECIDE_N, { get_self(), ACTIVE_PERM_N });
+    cancelballot_act.send(prop.current_ballot, string("Telos Works Cancel Ballot"));
 
     //modify proposal
     proposals.modify(prop, same_payer, [&](auto& col) {
@@ -337,16 +279,18 @@ ACTION works::deleteprop(name proposal_name) {
     proposals_table proposals(get_self(), get_self().value);
     auto& prop = proposals.get(proposal_name.value, "proposal not found");
 
-    //authenticate
-    // require_auth(prop.proposer);
-
     //open config singleton, get config
     config_singleton configs(get_self(), get_self().value);
     auto conf = configs.get();
 
     //validate
-    check(prop.status == "failed"_n || prop.status == "cancelled"_n || prop.status == "completed"_n, 
-        "proposal must be failed, cancelled, or completed to delete");
+    check(prop.status == "drafting"_n || prop.status == "failed"_n || prop.status == "cancelled"_n || prop.status == "completed"_n, 
+        "proposal must be drafting, failed, cancelled, or completed to delete");
+
+    //authenticate
+    if (prop.status == "drafting"_n) {
+        require_auth(prop.proposer);
+    }
 
     //return remaining funds back to available funds
     if (prop.remaining.amount > 0) {
@@ -508,12 +452,10 @@ ACTION works::closems(name proposal_name) {
     check(prop.status == "inprogress"_n, "proposal must be in progress to close milestone");
     check(ms.status == "voting"_n, "milestone must be voting to close");
     check(prop.current_ballot == ms.ballot_name, "current ballot and milestone ballot mismatch");
-
+    
     //send inline closeballot
-    action(permission_level{get_self(), name("active")}, name("trailservice"), name("closevoting"), make_tuple(
-        ms.ballot_name, //ballot_name
-        true //broadcast
-    )).send();
+    decide::closevoting_action closevoting_act(DECIDE_N, { get_self(), ACTIVE_PERM_N });
+    closevoting_act.send(ms.ballot_name, true);
 
 }
 
@@ -643,7 +585,7 @@ ACTION works::nextms(name proposal_name, name ballot_name) {
     //initialize
     vector<name> ballot_options = { name("yes"), name("no"), name("abstain") };
     time_point_sec ballot_end_time = time_point_sec(current_time_point()) + conf.milestone_length;
-    asset newballot_fee = asset(300000, TLOS_SYM); //TODO: get from trailservice config table
+    asset newballot_fee = asset(300000, TLOS_SYM); //TODO: get from telos.decide config table
 
     //charge telos decide newballot fee
     sub_balance(prop.proposer, asset(300000, TLOS_SYM)); //30 TLOS
@@ -651,40 +593,26 @@ ACTION works::nextms(name proposal_name, name ballot_name) {
     //send transfer inline to pay for newballot fee
     action(permission_level{get_self(), name("active")}, name("eosio.token"), name("transfer"), make_tuple(
         get_self(), //from
-        name("trailservice"), //to
+        name("telos.decide"), //to
         newballot_fee, //quantity
         string("Telos Works Ballot Fee Payment") //memo
     )).send();
 
     //send inline newballot
-    action(permission_level{get_self(), name("active")}, name("trailservice"), name("newballot"), make_tuple(
-        ballot_name, //ballot_name
-        name("proposal"), //category
-        get_self(), //publisher
-        VOTE_SYM, //treasury_symbol
-        name("1token1vote"), //voting_method
-        ballot_options //initial_options
-    )).send();
+    decide::newballot_action newballot_act(DECIDE_N, { get_self(), ACTIVE_PERM_N });
+    newballot_act.send(ballot_name, name("proposal"), get_self(), VOTE_SYM, name("1token1vote"), ballot_options);
 
     //send inline editdetails
-    action(permission_level{get_self(), name("active")}, name("trailservice"), name("editdetails"), make_tuple(
-        ballot_name, //ballot_name
-        prop.title, //title
-        prop.description, //description
-        prop.content //content
-    )).send();
+    decide::editdetails_action editdetails_act(DECIDE_N, { get_self(), ACTIVE_PERM_N });
+    editdetails_act.send(ballot_name, prop.title, prop.description, prop.content);
 
-    //toggle ballot votestake on (default is off)
-    action(permission_level{get_self(), name("active")}, name("trailservice"), name("togglebal"), make_tuple(
-        ballot_name, //ballot_name
-        name("votestake") //setting_name
-    )).send();
+    //send inline togglebal
+    decide::togglebal_action togglebal_act(DECIDE_N, { get_self(), ACTIVE_PERM_N });
+    togglebal_act.send(ballot_name, name("votestake"));
 
     //send inline openvoting
-    action(permission_level{get_self(), name("active")}, name("trailservice"), name("openvoting"), make_tuple(
-        ballot_name, //ballot_name
-        ballot_end_time //end_time
-    )).send();
+    decide::openvoting_action openvoting_act(DECIDE_N, { get_self(), ACTIVE_PERM_N });
+    openvoting_act.send(ballot_name, ballot_end_time);
 
 }
 
@@ -745,14 +673,14 @@ void works::catch_transfer(name from, name to, asset quantity, string memo) {
             return;
         }
 
+        //open config singleton, get config
+        config_singleton configs(get_self(), get_self().value);
+        auto conf = configs.get();
+
         //adds to available funds
         if (memo == std::string("fund")) { 
             
-            //open config singleton, get config
-            config_singleton configs(get_self(), get_self().value);
-            auto conf = configs.get();
-
-            //udpate available funds
+            //update available funds
             conf.available_funds += quantity;
 
             //set new config
@@ -766,22 +694,34 @@ void works::catch_transfer(name from, name to, asset quantity, string memo) {
 
             //emplace account if not found, update if exists
             if (acct == accounts.end()) {
-
                 //make new account
                 accounts.emplace(get_self(), [&](auto& col) {
                     col.balance = quantity;
                 });
-
             } else {
-
                 //update existing account
                 accounts.modify(*acct, same_payer, [&](auto& col) {
                     col.balance += quantity;
                 });
 
             }
+            conf.deposited_funds += quantity;
 
+            configs.set(conf, get_self());
         }
+
+    } else if (rec == "eosio.token"_n && from == get_self() && quantity.symbol == TLOS_SYM) {
+        
+        //open configs singleton, get config
+        config_singleton configs(get_self(), get_self().value);
+        auto conf = configs.get();
+
+        //initialize
+        asset self_balance = conf.deposited_funds + conf.available_funds;
+        asset total_transferable = (self_balance + quantity) - conf.deposited_funds;
+        
+        //validate
+        check(total_transferable >= quantity, "Telos Decide lacks the liquid TLOS to make this transfer");
 
     }
 
@@ -792,7 +732,7 @@ void works::catch_broadcast(name ballot_name, map<name, asset> final_results, ui
     //get initial receiver contract
     name rec = get_first_receiver();
 
-    if (rec == name("trailservice")) {
+    if (rec == name("telos.decide")) {
         
         //open proposals table, get by ballot index, find prop
         proposals_table proposals(get_self(), get_self().value);
@@ -802,7 +742,7 @@ void works::catch_broadcast(name ballot_name, map<name, asset> final_results, ui
         if (by_ballot_itr != props_by_ballot.end()) {
 
             //open telos decide treasury table, get treasury
-            treasuries_table treasuries(name("trailservice"), name("trailservice").value);
+            treasuries_table treasuries(name("telos.decide"), name("telos.decide").value);
             auto& trs = treasuries.get(VOTE_SYM.code().raw(), "treasury not found");
 
             //open milestones table, get milestone
@@ -877,13 +817,6 @@ void works::catch_broadcast(name ballot_name, map<name, asset> final_results, ui
 
                 }
 
-                //update proposal
-                proposals.modify(*by_ballot_itr, same_payer, [&](auto& col) {
-                    col.status = new_prop_status;
-                    col.refunded = refund;
-                    col.remaining = new_remaining;
-                });
-
             } else {
 
                 //execute if current and last milestone both failed
@@ -894,7 +827,16 @@ void works::catch_broadcast(name ballot_name, map<name, asset> final_results, ui
 
                 }
 
+                new_remaining = by_ballot_itr->remaining;
+
             }
+
+            //update proposal
+            proposals.modify(*by_ballot_itr, same_payer, [&](auto& col) {
+                col.status = new_prop_status;
+                col.refunded = refund;
+                col.remaining = new_remaining;
+            });
 
             //update milestone
             milestones.modify(ms, same_payer, [&](auto& col) {
@@ -924,6 +866,12 @@ void works::sub_balance(name account_owner, asset quantity) {
         col.balance -= quantity;
     });
 
+    config_singleton configs(get_self(), get_self().value);
+    auto conf = configs.get();
+
+    conf.deposited_funds -= quantity;
+
+    configs.set(conf, get_self());
 }
 
 void works::add_balance(name account_owner, asset quantity) {
@@ -937,6 +885,12 @@ void works::add_balance(name account_owner, asset quantity) {
         col.balance += quantity;
     });
 
+    config_singleton configs(get_self(), get_self().value);
+    auto conf = configs.get();
+
+    conf.deposited_funds += quantity;
+
+    configs.set(conf, get_self());
 }
 
 bool works::valid_category(name category) {
