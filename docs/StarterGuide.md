@@ -1,17 +1,15 @@
 # Starter Guide
 
-## Contract Flow
+## 1. Initialize
 
-1. Initialize
-
-### ACTION init()
+ACTION init()
 * app_name: "Telos Works"
 * app_version: "v0.1.0"
 * initial_admin: "workstester1"
 
-2. Draft Proposal
+## 2. Draft Proposal
 
-### ACTION draftprop()
+ACTION draftprop()
 * title: "Proposal 1"
 * description: "Works Proposal 1"
 * content: "none"
@@ -21,38 +19,38 @@
 * total_requested: "1000.0000 TLOS"
 * milestones: 2
 
-3. Start First Milestone
+## 3. Start First Milestone
 
-### ACTION launchprop()
+ACTION launchprop()
 * proposal_name: "worksprop1"
 
-4. Vote
+## 4. Vote
 
-### Vote through Telos Decide
+Vote through Telos Decide
 
-5. Close Ballot
+## 5. Close Ballot
 
-### ACTION closems()
+ACTION closems()
 * proposal_name: "worksprop1"
 
 Note that this will render a decision based on the ballot results.
 
 The milestone status will be changed to either passed or failed.
 
-6. Submit Report
+## 6. Submit Report
 
-### ACTION submitreport()
+ACTION submitreport()
 * proposal_name: "worksprop1"
 * report: "report1"
 
-7. Claim Funds
+## 7. Claim Funds
 
-### ACTION claimfunds
+ACTION claimfunds
 * proposal_name: "worksprop1"
 
-8. Start Next Milestone
+## 8. Start Next Milestone
 
-### ACTION nextms()
+ACTION nextms()
 * proposal_name: "worksprop1"
 * ballot_name: "worksprop2"
 
