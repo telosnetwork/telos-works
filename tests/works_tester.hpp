@@ -15,7 +15,7 @@ public:
     
     abi_serializer works_abi_ser;
 
-    const name works_name = name("telos.works"); // NOTE: this name may not be perm yet
+    const name works_name = name("works.decide"); // NOTE: this name may not be perm yet
 
     works_tester(setup_mode mode = setup_mode::full): trail_tester(mode) {
 
@@ -30,6 +30,7 @@ public:
 
         //create accounts
         create_account_with_resources(works_name, eosio_name, ram_amount, false);
+        
         produce_blocks();
         
         //setcode, setabi, init
