@@ -16,7 +16,7 @@ using namespace eosio::testing;
 using namespace eosio::chain;
 using namespace fc;
 using namespace std;
-using namespace trail::testing;
+using namespace decidetesting::testing;
 using namespace testing;
 using mvo = fc::mutable_variant_object;
 
@@ -27,7 +27,7 @@ BOOST_AUTO_TEST_SUITE(works_tests)
         //initialize
         string app_name = "Telos Works";
         string app_version = "v2.0.0";
-        name initial_admin = name("telos.works");
+        name initial_admin = name("works.decide");
         asset available_funds = asset::from_string("100000.0000 TLOS");
         asset reserved_funds = asset::from_string("0.0000 TLOS");
         asset deposited_funds = asset::from_string("0.0000 TLOS");

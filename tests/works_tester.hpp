@@ -1,4 +1,4 @@
-#include <trail_tester.hpp>
+#include <decide_tester.hpp>
 
 #include <contracts.hpp>
 
@@ -6,22 +6,23 @@ using namespace eosio::chain;
 using namespace eosio::testing;
 using namespace fc;
 using namespace std;
-using namespace trail::testing;
+using namespace decidetesting::testing;
 
 using mvo = fc::mutable_variant_object;
 
-class works_tester : public trail_tester {
-public:
+class works_tester : public decide_tester {
+    
+    public:
     
     abi_serializer works_abi_ser;
 
     const name works_name = name("works.decide"); // NOTE: this name may not be perm yet
 
-    works_tester(setup_mode mode = setup_mode::full): trail_tester(mode) {
+    works_tester(setup_mode mode = setup_mode::full): decide_tester(mode) {
 
         //setup telos decide
-        set_config("v2.0.0", true);
-        produce_blocks();
+        // set_config("v2.0.0", true);
+        // produce_blocks();
         
         //initialize
         asset max_vote_supply = asset::from_string("1000000000.0000 VOTE");
@@ -38,7 +39,7 @@ public:
         produce_blocks();
 
         //create VOTE treasury
-        base_tester::transfer(eosio_name, trail_name, "3000.0000 TLOS", "", token_name);
+        base_tester::transfer(eosio_name, decide_name, "3000.0000 TLOS", "", token_name);
         new_treasury(eosio_name, max_vote_supply, name("public"));
         produce_blocks();
 

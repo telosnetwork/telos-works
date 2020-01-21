@@ -7,7 +7,7 @@
 #include <eosio/eosio.hpp>
 #include <eosio/singleton.hpp>
 #include <eosio/asset.hpp>
-#include <trail.hpp>
+#include <decide.hpp>
 
 using namespace std;
 using namespace eosio;
@@ -28,7 +28,7 @@ CONTRACT works : public contract {
 
     ~works() {}
 
-    static constexpr name DECIDE_N = "trailservice"_n; //TODO: change to telos.decide when purchased
+    static constexpr name DECIDE_N = "telos.decide"_n; //TODO: change to telos.decide when purchased
     static constexpr name ACTIVE_PERM_N = "active"_n;
     const symbol TLOS_SYM = symbol("TLOS", 4);
     const symbol VOTE_SYM = symbol("VOTE", 4);
@@ -96,7 +96,7 @@ CONTRACT works : public contract {
     [[eosio::on_notify("eosio.token::transfer")]]
     void catch_transfer(name from, name to, asset quantity, string memo);
 
-    [[eosio::on_notify("trailservice::broadcast")]]
+    [[eosio::on_notify("telos.decide::broadcast")]]
     void catch_broadcast(name ballot_name, map<name, asset> final_results, uint32_t total_voters);
 
     //======================== functions ========================
@@ -214,7 +214,7 @@ CONTRACT works : public contract {
     typedef multi_index<name("accounts"), account> accounts_table;
 
     //telos decide treasury
-    // TODO: import from trail
+    // TODO: import from decide
     struct treasury {
         asset supply;
         asset max_supply;

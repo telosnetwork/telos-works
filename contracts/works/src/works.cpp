@@ -1,6 +1,6 @@
 #include "../include/works.hpp"
 
-using namespace trailservice;
+using namespace decidespace;
 
 //======================== admin actions ========================
 
@@ -175,7 +175,7 @@ ACTION works::launchprop(name proposal_name) {
 
     //initialize
     asset proposal_fee = asset(int64_t(prop.total_requested.amount * conf.fee_percent / 100), TLOS_SYM);
-    asset newballot_fee = asset(300000, TLOS_SYM); //TODO: get from trailservice config table
+    asset newballot_fee = asset(300000, TLOS_SYM); //TODO: get from telos.decide config table
     time_point_sec now = time_point_sec(current_time_point());
     time_point_sec ballot_end_time = now + conf.milestone_length;
     vector<name> ballot_options = { name("yes"), name("no"), name("abstain") };
@@ -213,25 +213,25 @@ ACTION works::launchprop(name proposal_name) {
     //send transfer inline to pay for newballot fee
     action(permission_level{get_self(), name("active")}, name("eosio.token"), name("transfer"), make_tuple(
         get_self(), //from
-        name("trailservice"), //to
+        name("telos.decide"), //to
         newballot_fee, //quantity
         string("Telos Works Ballot Fee Payment") //memo
     )).send();
 
     //send inline newballot
-    trail::newballot_action newballot_act(DECIDE_N, { get_self(), ACTIVE_PERM_N });
+    decide::newballot_action newballot_act(DECIDE_N, { get_self(), ACTIVE_PERM_N });
     newballot_act.send(proposal_name, name("proposal"), get_self(), VOTE_SYM, name("1token1vote"), ballot_options);
     
     //send inline editdetails
-    trail::editdetails_action editdetails_act(DECIDE_N, { get_self(), ACTIVE_PERM_N });
+    decide::editdetails_action editdetails_act(DECIDE_N, { get_self(), ACTIVE_PERM_N });
     editdetails_act.send(proposal_name, prop.title, prop.description, prop.content);
 
     //toggle ballot votestake on (default is off)
-    // trail::togglebal_action togglebal_act(DECIDE_N, { get_self(), ACTIVE_PERM_N });
-    // togglebal_act.send(proposal_name, name("votestake"));
+    decide::togglebal_action togglebal_act(DECIDE_N, { get_self(), ACTIVE_PERM_N });
+    togglebal_act.send(proposal_name, name("votestake"));
     
     //send inline openvoting
-    trail::openvoting_action openvoting_act(DECIDE_N, { get_self(), ACTIVE_PERM_N });
+    decide::openvoting_action openvoting_act(DECIDE_N, { get_self(), ACTIVE_PERM_N });
     openvoting_act.send(proposal_name, ballot_end_time);
 
 }
@@ -263,7 +263,7 @@ ACTION works::cancelprop(name proposal_name, string memo) {
     }
 
     //send inline cancelballot
-    trail::cancelballot_action cancelballot_act(DECIDE_N, { get_self(), ACTIVE_PERM_N });
+    decide::cancelballot_action cancelballot_act(DECIDE_N, { get_self(), ACTIVE_PERM_N });
     cancelballot_act.send(prop.current_ballot, string("Telos Works Cancel Ballot"));
 
     //modify proposal
@@ -454,7 +454,7 @@ ACTION works::closems(name proposal_name) {
     check(prop.current_ballot == ms.ballot_name, "current ballot and milestone ballot mismatch");
     
     //send inline closeballot
-    trail::closevoting_action closevoting_act(DECIDE_N, { get_self(), ACTIVE_PERM_N });
+    decide::closevoting_action closevoting_act(DECIDE_N, { get_self(), ACTIVE_PERM_N });
     closevoting_act.send(ms.ballot_name, true);
 
 }
@@ -585,7 +585,7 @@ ACTION works::nextms(name proposal_name, name ballot_name) {
     //initialize
     vector<name> ballot_options = { name("yes"), name("no"), name("abstain") };
     time_point_sec ballot_end_time = time_point_sec(current_time_point()) + conf.milestone_length;
-    asset newballot_fee = asset(300000, TLOS_SYM); //TODO: get from trailservice config table
+    asset newballot_fee = asset(300000, TLOS_SYM); //TODO: get from telos.decide config table
 
     //charge telos decide newballot fee
     sub_balance(prop.proposer, asset(300000, TLOS_SYM)); //30 TLOS
@@ -593,21 +593,25 @@ ACTION works::nextms(name proposal_name, name ballot_name) {
     //send transfer inline to pay for newballot fee
     action(permission_level{get_self(), name("active")}, name("eosio.token"), name("transfer"), make_tuple(
         get_self(), //from
-        name("trailservice"), //to
+        name("telos.decide"), //to
         newballot_fee, //quantity
         string("Telos Works Ballot Fee Payment") //memo
     )).send();
 
     //send inline newballot
-    trail::newballot_action newballot_act(DECIDE_N, { get_self(), ACTIVE_PERM_N });
+    decide::newballot_action newballot_act(DECIDE_N, { get_self(), ACTIVE_PERM_N });
     newballot_act.send(ballot_name, name("proposal"), get_self(), VOTE_SYM, name("1token1vote"), ballot_options);
 
     //send inline editdetails
-    trail::editdetails_action editdetails_act(DECIDE_N, { get_self(), ACTIVE_PERM_N });
+    decide::editdetails_action editdetails_act(DECIDE_N, { get_self(), ACTIVE_PERM_N });
     editdetails_act.send(ballot_name, prop.title, prop.description, prop.content);
 
+    //send inline togglebal
+    decide::togglebal_action togglebal_act(DECIDE_N, { get_self(), ACTIVE_PERM_N });
+    togglebal_act.send(ballot_name, name("votestake"));
+
     //send inline openvoting
-    trail::openvoting_action openvoting_act(DECIDE_N, { get_self(), ACTIVE_PERM_N });
+    decide::openvoting_action openvoting_act(DECIDE_N, { get_self(), ACTIVE_PERM_N });
     openvoting_act.send(ballot_name, ballot_end_time);
 
 }
@@ -728,7 +732,7 @@ void works::catch_broadcast(name ballot_name, map<name, asset> final_results, ui
     //get initial receiver contract
     name rec = get_first_receiver();
 
-    if (rec == name("trailservice")) {
+    if (rec == name("telos.decide")) {
         
         //open proposals table, get by ballot index, find prop
         proposals_table proposals(get_self(), get_self().value);
@@ -738,7 +742,7 @@ void works::catch_broadcast(name ballot_name, map<name, asset> final_results, ui
         if (by_ballot_itr != props_by_ballot.end()) {
 
             //open telos decide treasury table, get treasury
-            treasuries_table treasuries(name("trailservice"), name("trailservice").value);
+            treasuries_table treasuries(name("telos.decide"), name("telos.decide").value);
             auto& trs = treasuries.get(VOTE_SYM.code().raw(), "treasury not found");
 
             //open milestones table, get milestone
