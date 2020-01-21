@@ -19,6 +19,12 @@ To begin, navigate to the project directory: `telos-works/`
 
     ./build.sh works
 
+## Test
+
+    cd build/tests
+
+    ./unit_test -l all -r detailed -t works_tests -- --verbose
+
 ## Deploy
 
     ./deploy.sh works { account } { mainnet | testnet | local }
