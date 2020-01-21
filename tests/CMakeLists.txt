@@ -34,6 +34,7 @@ include_directories(
 
 # MESSAGE(STATUS "current include directory: ${CMAKE_SOURCE_DIR}/../libraries/telos-decide/tests")
 ### UNIT TESTING ###
+
 include(CTest) # eliminates DartConfiguration.tcl errors at test runtime
 enable_testing()
 # build unit test executable

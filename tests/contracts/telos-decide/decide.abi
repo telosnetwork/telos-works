@@ -344,7 +344,11 @@
             "base": "",
             "fields": [
                 {
-                    "name": "trail_version",
+                    "name": "app_name",
+                    "type": "string"
+                },
+                {
+                    "name": "app_version",
                     "type": "string"
                 },
                 {
@@ -512,6 +516,16 @@
                 {
                     "name": "treasury_symbol",
                     "type": "symbol"
+                }
+            ]
+        },
+        {
+            "name": "init",
+            "base": "",
+            "fields": [
+                {
+                    "name": "app_version",
+                    "type": "string"
                 }
             ]
         },
@@ -876,20 +890,6 @@
                 {
                     "name": "option_name",
                     "type": "name"
-                }
-            ]
-        },
-        {
-            "name": "setconfig",
-            "base": "",
-            "fields": [
-                {
-                    "name": "trail_version",
-                    "type": "string"
-                },
-                {
-                    "name": "set_defaults",
-                    "type": "bool"
                 }
             ]
         },
@@ -1337,6 +1337,11 @@
             "ricardian_contract": "---\nspec_version: \"0.2.0\"\ntitle: Forfeit Work\nsummary: 'Forfeit Work'\nicon: https://github.com/Telos-Foundation/images/raw/master/ricardian_assets/eosio.contracts/icons/voting.png#db28cd3db6e62d4509af3644ce7d377329482a14bb4bfaca2aa5f1400d8e8a84\n---\n\nWorker {{$action.account}} forfeits all currently commited work on the {{treasury_symbol}} treasury."
         },
         {
+            "name": "init",
+            "type": "init",
+            "ricardian_contract": "---\nspec_version: \"0.2.0\"\ntitle: Set Decide Config\nsummary: 'Set Decide Config Version'\nicon: https://github.com/Telos-Foundation/images/raw/master/ricardian_assets/eosio.contracts/icons/admin.png#9bf1cec664863bd6aaac0f814b235f8799fb02c850e9aa5da34e8a004bd6518e\n---\n\n{{$action.account}} sets the Telos Decide config to version {{app_version}}."
+        },
+        {
             "name": "lock",
             "type": "lock",
             "ricardian_contract": "---\nspec_version: \"0.2.0\"\ntitle: Lock Treasury Settings\nsummary: 'Lock Treasury Settings'\nicon: https://github.com/Telos-Foundation/images/raw/master/ricardian_assets/eosio.contracts/icons/token.png#207ff68b0406eaa56618b08bda81d6a0954543f36adc328ab3065f31a5c5d654\n---\n\nTreasury Manager {{$action.account}} locks the {{treasury_symbol}} treasury."
@@ -1400,11 +1405,6 @@
             "name": "rmvoption",
             "type": "rmvoption",
             "ricardian_contract": "---\nspec_version: \"0.2.0\"\ntitle: Remove Ballot Option\nsummary: 'Remove Ballot Option'\nicon: https://github.com/Telos-Foundation/images/raw/master/ricardian_assets/eosio.contracts/icons/token.png#207ff68b0406eaa56618b08bda81d6a0954543f36adc328ab3065f31a5c5d654\n---\n\nBallot publisher {{$action.account}} removes the {{option_name}} option from the {{ballot_name}} ballot."
-        },
-        {
-            "name": "setconfig",
-            "type": "setconfig",
-            "ricardian_contract": "---\nspec_version: \"0.2.0\"\ntitle: Set Trail Config\nsummary: 'Set Trail Config Version'\nicon: https://github.com/Telos-Foundation/images/raw/master/ricardian_assets/eosio.contracts/icons/admin.png#9bf1cec664863bd6aaac0f814b235f8799fb02c850e9aa5da34e8a004bd6518e\n---\n\n{{$action.account}} sets the Trail Service config to version {{trail_version}}."
         },
         {
             "name": "setunlocker",
