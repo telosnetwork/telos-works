@@ -678,7 +678,7 @@ void works::catch_transfer(name from, name to, asset quantity, string memo) {
         auto conf = configs.get();
 
         //adds to available funds
-        if (memo == std::string("fund")) { 
+        if (memo == std::string("fund") || memo == std::string("Transfer worker proposal share to works.decide account")) { 
             
             //update available funds
             conf.available_funds += quantity;
