@@ -77,6 +77,26 @@ ACTION works::setadmin(name new_admin) {
 
 }
 
+ACTION works::setthresh(double new_quorum_thresh, double new_yes_thresh, double new_quorum_refund_thresh, double new_yes_refund_thresh) {
+
+    //open config singleton, get config
+    config_singleton configs(get_self(), get_self().value);
+    auto conf = configs.get();
+
+    //authenticate
+    require_auth(conf.admin);
+
+    //change version
+    conf.quorum_threshold = new_quorum_thresh;
+    conf.yes_threshold = new_yes_thresh;
+    conf.quorum_refund_threshold = new_quorum_refund_thresh;
+    conf.yes_refund_threshold = new_yes_refund_thresh;
+
+    //set new config
+    configs.set(conf, get_self());
+
+}
+
 //======================== proposal actions ========================
 
 ACTION works::draftprop(string title, string description, string content, name proposal_name, name proposer, name category, asset total_requested, optional<uint16_t> milestones) {

@@ -24,6 +24,8 @@ BOOST_AUTO_TEST_SUITE(works_tests)
 
     BOOST_FIXTURE_TEST_CASE( configuration_setting, works_tester ) try {
 
+        //======================== check initial config ========================
+
         //initialize
         string app_name = "Telos Works";
         string app_version = "v2.0.0";
@@ -67,6 +69,8 @@ BOOST_AUTO_TEST_SUITE(works_tests)
         BOOST_REQUIRE_EQUAL(works_config["min_requested"].as<asset>(), min_requested);
         BOOST_REQUIRE_EQUAL(works_config["max_requested"].as<asset>(), max_requested);
 
+        //======================== change version ========================
+
         //initialize
         string new_version = "v2.0.1";
 
@@ -80,6 +84,8 @@ BOOST_AUTO_TEST_SUITE(works_tests)
         //check app version updated
         BOOST_REQUIRE_EQUAL(works_config["app_version"], new_version);
 
+        //======================== change admin ========================
+
         //initialize
         name new_works_admin = name("testaccounta");
 
@@ -92,6 +98,27 @@ BOOST_AUTO_TEST_SUITE(works_tests)
 
         //check admin updated
         BOOST_REQUIRE_EQUAL(works_config["admin"].as<name>(), new_works_admin);
+
+        //======================== change thresholds ========================
+
+        //initialize
+        double new_quorum = 15.00;
+        double new_yes = 70.00;
+        double new_quorum_refund = 5.00;
+        double new_yes_refund = 55.00;
+
+        //send setadmin trx
+        works_setthresh(new_quorum, new_yes, new_quorum_refund, new_yes_refund, new_works_admin);
+        produce_blocks();
+
+        //get new config table
+        works_config = get_works_config();
+
+        //check admin updated
+        BOOST_REQUIRE_EQUAL(works_config["quorum_threshold"].as<double>(), new_quorum);
+        BOOST_REQUIRE_EQUAL(works_config["yes_threshold"].as<double>(), new_yes);
+        BOOST_REQUIRE_EQUAL(works_config["quorum_refund_threshold"].as<double>(), new_quorum_refund);
+        BOOST_REQUIRE_EQUAL(works_config["yes_refund_threshold"].as<double>(), new_yes_refund);
 
     } FC_LOG_AND_RETHROW()
 
