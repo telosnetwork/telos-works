@@ -19,10 +19,6 @@ class works_tester : public decide_tester {
     const name works_name = name("works.decide"); // NOTE: this name may not be perm yet
 
     works_tester(setup_mode mode = setup_mode::full): decide_tester(mode) {
-
-        //setup telos decide
-        // set_config("v2.0.0", true);
-        // produce_blocks();
         
         //initialize
         asset max_vote_supply = asset::from_string("1000000000.0000 VOTE");
@@ -139,6 +135,22 @@ class works_tester : public decide_tester {
         ));
         set_transaction_headers( trx );
         trx.sign(get_private_key(old_admin, "active"), control->get_chain_id());
+        return push_transaction( trx );
+    }
+
+    transaction_trace_ptr works_setthresh(double new_quorum_thresh, double new_yes_thresh, 
+        double new_quorum_refund_thresh, double new_yes_refund_thresh, name admin_name) {
+        signed_transaction trx;
+        vector<permission_level> permissions { { admin_name, name("active") } };
+        trx.actions.emplace_back(get_action(works_name, name("setthresh"), permissions, 
+            mvo()
+                ("new_quorum_thresh", new_quorum_thresh)
+                ("new_yes_thresh", new_yes_thresh)
+                ("new_quorum_refund_thresh", new_quorum_refund_thresh)
+                ("new_yes_refund_thresh", new_yes_refund_thresh)
+        ));
+        set_transaction_headers( trx );
+        trx.sign(get_private_key(admin_name, "active"), control->get_chain_id());
         return push_transaction( trx );
     }
 
