@@ -118,6 +118,7 @@ ACTION works::draftprop(string title, string description, string content, name p
 
     //validate
     check(total_requested <= conf.max_requested, "requested amount exceeds allowed maximum");
+    check(total_requested >= conf.min_requested, "requested amount is less than minimum");
     check(milestone_count > 0, "milestones must be greater than 0");
     check(milestone_count <= conf.max_milestones, "too many milestones");
     check(valid_category(category), "invalid works category");
