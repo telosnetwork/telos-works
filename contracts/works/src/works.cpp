@@ -118,6 +118,9 @@ ACTION works::draftprop(string title, string description, string content, name p
 
     //validate
     check(total_requested <= conf.max_requested, "requested amount exceeds allowed maximum");
+    check(total_requested >= conf.min_requested, "requested amount is less than minimum");
+    check(total_requested.amount > 0, "requested amount must be a positive number");
+    check(total_requested.symbol == TLOS_SYM, "requested amount must be in TLOS");
     check(milestone_count > 0, "milestones must be greater than 0");
     check(milestone_count <= conf.max_milestones, "too many milestones");
     check(valid_category(category), "invalid works category");
@@ -794,7 +797,7 @@ void works::catch_broadcast(name ballot_name, map<name, asset> final_results, ui
             asset approve_refund_thresh = non_abstain_votes * conf.yes_threshold / 100;
 
             //determine approval and refund
-            if (total_votes >= quorum_thresh && final_results["yes"_n] >= approve_thresh) {
+            if (total_votes >= quorum_thresh && final_results["yes"_n] >= approve_thresh && non_abstain_votes.amount > 0) {
                 
                 approve = true;
                 refund = true;
