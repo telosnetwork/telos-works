@@ -77,6 +77,26 @@ ACTION works::setadmin(name new_admin) {
 
 }
 
+ACTION works::setthresh(double new_quorum_thresh, double new_yes_thresh, double new_quorum_refund_thresh, double new_yes_refund_thresh) {
+
+    //open config singleton, get config
+    config_singleton configs(get_self(), get_self().value);
+    auto conf = configs.get();
+
+    //authenticate
+    require_auth(conf.admin);
+
+    //change version
+    conf.quorum_threshold = new_quorum_thresh;
+    conf.yes_threshold = new_yes_thresh;
+    conf.quorum_refund_threshold = new_quorum_refund_thresh;
+    conf.yes_refund_threshold = new_yes_refund_thresh;
+
+    //set new config
+    configs.set(conf, get_self());
+
+}
+
 //======================== proposal actions ========================
 
 ACTION works::draftprop(string title, string description, string content, name proposal_name, name proposer, name category, asset total_requested, optional<uint16_t> milestones) {
@@ -98,6 +118,9 @@ ACTION works::draftprop(string title, string description, string content, name p
 
     //validate
     check(total_requested <= conf.max_requested, "requested amount exceeds allowed maximum");
+    check(total_requested >= conf.min_requested, "requested amount is less than minimum");
+    check(total_requested.amount > 0, "requested amount must be a positive number");
+    check(total_requested.symbol == TLOS_SYM, "requested amount must be in TLOS");
     check(milestone_count > 0, "milestones must be greater than 0");
     check(milestone_count <= conf.max_milestones, "too many milestones");
     check(valid_category(category), "invalid works category");
@@ -678,7 +701,7 @@ void works::catch_transfer(name from, name to, asset quantity, string memo) {
         auto conf = configs.get();
 
         //adds to available funds
-        if (memo == std::string("fund")) { 
+        if (memo == std::string("fund") || memo == std::string("Transfer worker proposal share to works.decide account")) { 
             
             //update available funds
             conf.available_funds += quantity;
@@ -774,7 +797,7 @@ void works::catch_broadcast(name ballot_name, map<name, asset> final_results, ui
             asset approve_refund_thresh = non_abstain_votes * conf.yes_threshold / 100;
 
             //determine approval and refund
-            if (total_votes >= quorum_thresh && final_results["yes"_n] >= approve_thresh) {
+            if (total_votes >= quorum_thresh && final_results["yes"_n] >= approve_thresh && non_abstain_votes.amount > 0) {
                 
                 approve = true;
                 refund = true;

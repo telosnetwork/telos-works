@@ -44,7 +44,8 @@ CONTRACT works : public contract {
     //set new admin
     ACTION setadmin(name new_admin);
 
-    //TODO: actions to change config settings
+    //set new config thresholds
+    ACTION setthresh(double new_quorum_thresh, double new_yes_thresh, double new_quorum_refund_thresh, double new_yes_refund_thresh);
 
     //======================== proposal actions ========================
 
