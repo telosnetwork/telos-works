@@ -608,10 +608,10 @@ ACTION works::nextms(name proposal_name, name ballot_name) {
     //initialize
     vector<name> ballot_options = { name("yes"), name("no"), name("abstain") };
     time_point_sec ballot_end_time = time_point_sec(current_time_point()) + conf.milestone_length;
-    asset newballot_fee = asset(300000, TLOS_SYM); //TODO: get from telos.decide config table
+    asset newballot_fee = asset(100000, TLOS_SYM); //TODO: get from telos.decide config table
 
     //charge telos decide newballot fee
-    sub_balance(prop.proposer, asset(300000, TLOS_SYM)); //30 TLOS
+    sub_balance(prop.proposer, newballot_fee); //10 TLOS
 
     //send transfer inline to pay for newballot fee
     action(permission_level{get_self(), name("active")}, name("eosio.token"), name("transfer"), make_tuple(
