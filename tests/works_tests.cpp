@@ -307,7 +307,7 @@ BOOST_AUTO_TEST_SUITE(works_tests)
         //initialize
         asset old_balance = testa_works_acct["balance"].as<asset>();
         asset proposal_fee = asset(prop["total_requested"].as<asset>().get_amount() * conf["fee_percent"].as<double>() / 100, tlos_sym);
-        asset decide_ballot_fee = asset::from_string("30.0000 TLOS"); //TODO: pull from decide config
+        asset decide_ballot_fee = asset::from_string("10.0000 TLOS"); //TODO: pull from decide config
 
         //enforce min fee
         if (proposal_fee < conf["min_fee"].as<asset>()) {
@@ -423,7 +423,7 @@ BOOST_AUTO_TEST_SUITE(works_tests)
         //initialize
         asset old_balance = testa_works_acct["balance"].as<asset>();
         asset proposal_fee = asset(prop["total_requested"].as<asset>().get_amount() * conf["fee_percent"].as<double>() / 100, tlos_sym);
-        asset decide_ballot_fee = asset::from_string("30.0000 TLOS"); //TODO: pull from decide config
+        asset decide_ballot_fee = asset::from_string("10.0000 TLOS"); //TODO: pull from decide config
 
         //enforce min fee
         if (proposal_fee < conf["min_fee"].as<asset>()) {
@@ -558,6 +558,7 @@ BOOST_AUTO_TEST_SUITE(works_tests)
         prop = get_works_proposal(prop_name);
         ms1 = get_works_milestone(prop_name, 1);
         fc::variant ms2 = get_works_milestone(prop_name, 2);
+        testa_works_acct = get_works_account(testa, tlos_sym);
 
         //initialize
         map<name, asset> blank_results = variant_to_map<name, asset>(ms2["ballot_results"]);
@@ -577,6 +578,8 @@ BOOST_AUTO_TEST_SUITE(works_tests)
         validate_map(blank_results, name("yes"), asset::from_string("0.0000 VOTE"));
         validate_map(blank_results, name("no"), asset::from_string("0.0000 VOTE"));
         validate_map(blank_results, name("abstain"), asset::from_string("0.0000 VOTE"));
+
+        BOOST_REQUIRE_EQUAL(testa_works_acct["balance"].as<asset>(), testa_running_balance);
 
         //======================== vote on ms 2 ========================
 
@@ -874,7 +877,7 @@ BOOST_AUTO_TEST_SUITE(works_tests)
         //initialize
         asset old_balance = testa_works_acct["balance"].as<asset>();
         asset proposal_fee = asset(prop["total_requested"].as<asset>().get_amount() * conf["fee_percent"].as<double>() / 100, tlos_sym);
-        asset decide_ballot_fee = asset::from_string("30.0000 TLOS"); //TODO: pull from decide config
+        asset decide_ballot_fee = asset::from_string("10.0000 TLOS"); //TODO: pull from decide config
 
         //enforce min fee
         if (proposal_fee < conf["min_fee"].as<asset>()) {
@@ -1063,7 +1066,7 @@ BOOST_AUTO_TEST_SUITE(works_tests)
         //initialize
         asset old_balance = testa_works_acct["balance"].as<asset>();
         asset proposal_fee = asset(prop["total_requested"].as<asset>().get_amount() * conf["fee_percent"].as<double>() / 100, tlos_sym);
-        asset decide_ballot_fee = asset::from_string("30.0000 TLOS"); //TODO: pull from decide config
+        asset decide_ballot_fee = asset::from_string("10.0000 TLOS"); //TODO: pull from decide config
 
         //enforce min fee
         if (proposal_fee < conf["min_fee"].as<asset>()) {
@@ -1558,7 +1561,7 @@ BOOST_AUTO_TEST_SUITE(works_tests)
         //initialize
         asset old_balance = testa_works_acct["balance"].as<asset>();
         asset proposal_fee = asset(prop["total_requested"].as<asset>().get_amount() * conf["fee_percent"].as<double>() / 100, tlos_sym);
-        asset decide_ballot_fee = asset::from_string("30.0000 TLOS"); //TODO: pull from decide config
+        asset decide_ballot_fee = asset::from_string("10.0000 TLOS"); //TODO: pull from decide config
 
         //enforce min fee
         if (proposal_fee < conf["min_fee"].as<asset>()) {
