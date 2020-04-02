@@ -198,7 +198,7 @@ ACTION works::launchprop(name proposal_name) {
 
     //initialize
     asset proposal_fee = asset(int64_t(prop.total_requested.amount * conf.fee_percent / 100), TLOS_SYM);
-    asset newballot_fee = asset(300000, TLOS_SYM); //TODO: get from telos.decide config table
+    asset newballot_fee = asset(100000, TLOS_SYM); //TODO: get from telos.decide config table
     time_point_sec now = time_point_sec(current_time_point());
     time_point_sec ballot_end_time = now + conf.milestone_length;
     vector<name> ballot_options = { name("yes"), name("no"), name("abstain") };
