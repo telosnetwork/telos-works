@@ -2,6 +2,40 @@
 
 using namespace decidespace;
 
+ACTION works::subfunds(asset amount) {
+
+    //open config singleton, get config
+    config_singleton configs(get_self(), get_self().value);
+    auto conf = configs.get();
+
+    //authenticate
+    require_auth(conf.admin);
+
+    //subtract tlos from available funds
+    conf.available_funds -= amount;
+
+    //set new config
+    configs.set(conf, get_self());
+
+}
+
+ACTION works::addfunds(asset amount) {
+
+    //open config singleton, get config
+    config_singleton configs(get_self(), get_self().value);
+    auto conf = configs.get();
+
+    //authenticate
+    require_auth(conf.admin);
+
+    //add tlos to available funds
+    conf.available_funds += amount;
+
+    //set new config
+    configs.set(conf, get_self());
+
+}
+
 //======================== admin actions ========================
 
 ACTION works::init(string app_name, string app_version, name initial_admin) {

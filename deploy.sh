@@ -36,7 +36,7 @@ while getopts ":c:a:t:h" opt; do
         if [[ $OPTARG == "mainnet" ]]; then
             url="https://telos.caleos.io/"
         elif [[ $OPTARG == "testnet" ]]; then
-            url="https://testnet.telosusa.io/"
+            url="https://testnet.telos.caleos.io/"
         elif [[ $OPTARG == "local" ]]; then
             url="http://127.0.0.1:8888/"
         else

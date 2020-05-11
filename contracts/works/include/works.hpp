@@ -33,6 +33,12 @@ CONTRACT works : public contract {
     const symbol TLOS_SYM = symbol("TLOS", 4);
     const symbol VOTE_SYM = symbol("VOTE", 4);
 
+    //======================== migration actions ========================
+
+    ACTION subfunds(asset amount);
+
+    ACTION addfunds(asset amount);
+
     //======================== admin actions ========================
 
     //initialize the contract
