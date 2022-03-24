@@ -42,7 +42,7 @@ BOOST_AUTO_TEST_SUITE(works_tests)
         double fee_percent = 5.0;
         uint16_t min_milestones = 1;
         uint16_t max_milestones = 12;
-        uint32_t milestone_length = 2505600; //29 days in seconds
+        uint32_t milestone_length = 1'000'000; //1.000.000 seconds (12~ days)
         asset min_requested = asset::from_string("1000.0000 TLOS");
         asset max_requested = asset::from_string("500000.0000 TLOS");
 

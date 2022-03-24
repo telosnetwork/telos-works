@@ -47,6 +47,9 @@ CONTRACT works : public contract {
     //set new config thresholds
     ACTION setthresh(double new_quorum_thresh, double new_yes_thresh, double new_quorum_refund_thresh, double new_yes_refund_thresh);
 
+    //set new milestone length
+    ACTION setmlength(uint32_t new_milestone_length);
+
     //======================== proposal actions ========================
 
     //draft a new community proposal
@@ -139,7 +142,7 @@ CONTRACT works : public contract {
 
         uint16_t min_milestones; //1
         uint16_t max_milestones; //12
-        uint32_t milestone_length; //2505600 seconds (29 days)
+        uint32_t milestone_length; //1.000.000 seconds (12~ days)
         
         asset min_requested; //1k TLOS
         asset max_requested; //500k TLOS

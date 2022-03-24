@@ -33,7 +33,7 @@ ACTION works::init(string app_name, string app_version, name initial_admin) {
         double(5.0), //fee_percent
         uint16_t(1), //min_milestones
         uint16_t(12), //max_milestones
-        uint32_t(2505600), //milestone_length
+        uint32_t(1'000'000), //milestone_length
         asset(10000000, TLOS_SYM), //min_requested
         asset(5000000000, TLOS_SYM) //max_requested
     };
@@ -91,6 +91,23 @@ ACTION works::setthresh(double new_quorum_thresh, double new_yes_thresh, double 
     conf.yes_threshold = new_yes_thresh;
     conf.quorum_refund_threshold = new_quorum_refund_thresh;
     conf.yes_refund_threshold = new_yes_refund_thresh;
+
+    //set new config
+    configs.set(conf, get_self());
+
+}
+
+ACTION works::setmlength(uint32_t new_milestone_length) {
+
+    //open config singleton, get config
+    config_singleton configs(get_self(), get_self().value);
+    auto conf = configs.get();
+
+    //authenticate
+    require_auth(conf.admin);
+
+    //change milestone length
+    conf.milestone_length = new_milestone_length;
 
     //set new config
     configs.set(conf, get_self());
