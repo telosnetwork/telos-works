@@ -1,5 +1,5 @@
 <h1 class="clause">Intent</h1>
-The intention of the authors and invoker of this smart contract is to ...
+The intention of the authors and invoker of this smart contract is to interact with the Telos Works proposal system by creating, editing, deleting ballots and opening them for voting, voting on proposals, closing completed proposals, providing milestone reports, and claiming, withdrawing or abandoning funds from completed proposals.
 
 <h1 class="clause">Term</h1>
 This Contract expires at the conclusion of code execution.
