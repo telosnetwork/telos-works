@@ -91,6 +91,9 @@ CONTRACT works : public contract {
 
     //withdraw from account balance
     ACTION withdraw(name account_name, asset quantity);
+    
+    //abandon funds from account balance
+    ACTION abandon(name account_name, asset quantity);
 
     //delete an account
     ACTION deleteacct(name account_name);

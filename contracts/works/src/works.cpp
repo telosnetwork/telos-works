@@ -680,6 +680,20 @@ ACTION works::withdraw(name account_name, asset quantity) {
 
 }
 
+ACTION works::abandon(name account_name, asset quantity) {
+
+    //authenticate
+    require_auth(account_name);
+
+    //validate
+    check(quantity.symbol == TLOS_SYM, "can only abandon TLOS");
+    check(quantity.amount > 0, "can only abandon a positive amount");
+
+    //subtract balance from account
+    sub_balance(account_name, quantity);
+
+}
+
 ACTION works::deleteacct(name account_name) {
 
     //authenticate
